@@ -1,0 +1,132 @@
+/* Cabin Booking System - Custom Styles */
+
+:root {
+    --primary-color: #0d6efd;
+    --success-color: #198754;
+    --warning-color: #ffc107;
+    --danger-color: #dc3545;
+    --info-color: #0dcaf0;
+    --light-bg: #f8f9fa;
+    --dark-text: #212529;
+}
+
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background-color: var(--light-bg);
+}
+
+/* Custom Card Styles */
+.dashboard-card {
+    border: none;
+    border-radius: 15px;
+    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+    transition: all 0.3s ease;
+}
+
+.dashboard-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+}
+
+/* Booking Status Badges */
+.badge-pending {
+    background-color: var(--warning-color);
+    color: var(--dark-text);
+}
+
+.badge-approved {
+    background-color: var(--success-color);
+}
+
+.badge-rejected {
+    background-color: var(--danger-color);
+}
+
+.badge-vip {
+    background-color: #6f42c1;
+    color: white;
+}
+
+/* Navigation */
+.navbar-brand {
+    font-weight: bold;
+}
+
+.nav-pills .nav-link.active {
+    background-color: var(--primary-color);
+}
+
+/* Custom Button Styles */
+.btn-gradient {
+    background: linear-gradient(45deg, var(--primary-color), #0056b3);
+    border: none;
+    color: white;
+    transition: all 0.3s ease;
+}
+
+.btn-gradient:hover {
+    background: linear-gradient(45deg, #0056b3, var(--primary-color));
+    transform: translateY(-1px);
+}
+
+/* AI Recommendation Highlight */
+.ai-recommendation {
+    border-left: 4px solid #6f42c1;
+    background-color: #f8f5ff;
+}
+
+.ai-badge {
+    background-color: #6f42c1;
+    color: white;
+    font-size: 0.75rem;
+}
+
+/* Loading Spinner */
+.spinner-border-sm {
+    width: 1rem;
+    height: 1rem;
+}
+
+/* Responsive Utilities */
+@media (max-width: 768px) {
+    .dashboard-card {
+        margin-bottom: 1rem;
+    }
+
+    .table-responsive {
+        font-size: 0.875rem;
+    }
+}
+
+/* Custom Alert Styles */
+.alert-ai {
+    background-color: #e7e3ff;
+    border-color: #6f42c1;
+    color: #4a2c6a;
+}
+
+/* Profile Image */
+.profile-img {
+    width: 120px;
+    height: 120px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 4px solid var(--primary-color);
+}
+
+/* Statistics Cards */
+.stat-card {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border-radius: 15px;
+}
+
+.stat-card .stat-number {
+    font-size: 2.5rem;
+    font-weight: bold;
+}
+
+.stat-card .stat-label {
+    font-size: 0.875rem;
+    opacity: 0.9;
+}

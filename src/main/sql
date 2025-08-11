@@ -1,0 +1,104 @@
+CREATE DATABASE IF NOT EXISTS cabin_booking;
+USE cabin_booking;
+
+-- USERS TABLE
+CREATE TABLE users (
+    user_id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(100) NOT NULL,
+    email VARCHAR(100) UNIQUE NOT NULL,
+    password VARCHAR(255) NOT NULL,
+    user_type ENUM('NORMAL','VIP','ADMIN','SUPER_ADMIN') DEFAULT 'NORMAL',
+    default_company_id INT,
+    status ENUM('ACTIVE','INACTIVE') DEFAULT 'ACTIVE',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- COMPANIES TABLE
+CREATE TABLE companies (
+    company_id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(100) NOT NULL,
+    location VARCHAR(200),
+    contact_info VARCHAR(500),
+    status ENUM('ACTIVE','INACTIVE') DEFAULT 'ACTIVE',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- CABINS TABLE
+CREATE TABLE cabins (
+    cabin_id INT AUTO_INCREMENT PRIMARY KEY,
+    company_id INT NOT NULL,
+    name VARCHAR(100) NOT NULL,
+    capacity INT NOT NULL,
+    amenities TEXT,
+    is_vip_only BOOLEAN DEFAULT FALSE,
+    location VARCHAR(200),
+    status ENUM('ACTIVE','MAINTENANCE','INACTIVE') DEFAULT 'ACTIVE',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (company_id) REFERENCES companies(company_id)
+);
+
+-- BOOKINGS TABLE
+CREATE TABLE bookings (
+    booking_id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT NOT NULL,
+    cabin_id INT NOT NULL,
+    booking_date DATE NOT NULL,
+    time_slot VARCHAR(20) NOT NULL,
+    purpose TEXT NOT NULL,
+    status ENUM('PENDING','APPROVED','REJECTED','CANCELLED') DEFAULT 'PENDING',
+    priority_level ENUM('NORMAL','HIGH','VIP') DEFAULT 'NORMAL',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    approved_by INT,
+    FOREIGN KEY (user_id) REFERENCES users(user_id),
+    FOREIGN KEY (cabin_id) REFERENCES cabins(cabin_id)
+);
+-- ✅ Add missing booking_type column to your existing bookings table
+ALTER TABLE bookings
+ADD COLUMN booking_type ENUM('SINGLE_DAY', 'MULTI_DAY', 'RECURRING', 'EMERGENCY')
+NOT NULL DEFAULT 'SINGLE_DAY'
+AFTER purpose;
+-- ✅ Add the missing approved_at column
+ALTER TABLE bookings
+ADD COLUMN approved_at TIMESTAMP NULL
+AFTER approved_by;
+
+SHOW COLUMNS FROM bookings;
+DESCRIBE bookings;
+-- USER PREFERENCES (for AI)
+CREATE TABLE user_preferences (
+    preference_id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT NOT NULL,
+    preferred_cabin_capacity INT,
+    preferred_time_slot VARCHAR(20),
+    booking_frequency INT DEFAULT 0,
+    last_updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(user_id)
+);
+
+-- INSERT SAMPLE DATA
+INSERT INTO companies (name, location, contact_info) VALUES
+('TechCorp Solutions', 'Gurgaon', 'contact@techcorp.com'),
+('InnovateLabs', 'Bangalore', 'hello@innovatelabs.com');
+
+INSERT INTO users (name, email, password, user_type, default_company_id) VALUES
+('Admin User', 'admin@techcorp.com', 'admin123', 'ADMIN', 1),
+('John Doe', 'john@techcorp.com', 'user123', 'NORMAL', 1),
+('Jane VIP', 'jane@techcorp.com', 'vip123', 'VIP', 1);
+
+INSERT INTO cabins (company_id, name, capacity, amenities, is_vip_only, location) VALUES
+(1, 'Conference Room A', 10, 'Projector, Whiteboard', FALSE, 'Ground Floor'),
+(1, 'Executive Suite', 6, 'Premium Setup', TRUE, 'Top Floor'),
+(1, 'Meeting Room B', 8, 'Whiteboard, AC', FALSE, 'First Floor');
+-------------------------------------------------------------------------------------------------------
+select * from users;
+DELETE FROM users WHERE user_id = 1;
+DELETE FROM users WHERE user_id = 2;
+DELETE FROM users WHERE user_id = 3;
+DELETE FROM users WHERE user_id = 4;
+DELETE FROM users WHERE user_id = 5;
+select * from companies;
+UPDATE users
+SET user_type = 'SUPER_ADMIN'
+WHERE user_id = 5;
+DESCRIBE bookings;
+SELECT * FROM users WHERE user_type IN ('ADMIN', 'SUPER_ADMIN');
