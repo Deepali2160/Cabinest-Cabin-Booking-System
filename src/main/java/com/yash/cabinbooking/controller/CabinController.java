@@ -19,19 +19,16 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 /**
- * CABIN CONTROLLER - SINGLE COMPANY VERSION
- *
- * Modified for Yash Technology single company usage
- * - Removed multi-company complexity
- * - Simplified cabin management
- * - Single organization focus
- * - Updated to match new service layer
+ * CABIN CONTROLLER - ENHANCED WITH PROPER URL MAPPINGS
+ * ✅ Fixed all URL mapping issues and duplicate exception handling
  */
 @WebServlet(urlPatterns = {
-        "/admin/add-cabin",        // Cabin creation
-        "/admin/manage-cabins",    // Cabin management
-        "/admin/edit-cabin",       // Cabin editing
-        "/admin/delete-cabin"      // Cabin deletion
+        "/admin/add-cabin",           // Cabin creation
+        "/admin/manage-cabins",       // Cabin management
+        "/admin/edit-cabin",          // Cabin editing
+        "/admin/delete-cabin",        // Cabin deletion
+        "/admin/update-cabin-status", // ✅ ADDED: Status update
+        "/admin/cabins"               // ✅ ADDED: Alternative cabin route
 })
 public class CabinController extends HttpServlet {
 
@@ -58,8 +55,10 @@ public class CabinController extends HttpServlet {
                     showAddCabinForm(request, response);
                     break;
                 case "manage-cabins":
+                case "cabins":
                     showCabinManagement(request, response);
                     break;
+                case "edit-cabin":
                 case "edit":
                     showEditCabinForm(request, response);
                     break;
@@ -87,22 +86,35 @@ public class CabinController extends HttpServlet {
         String action = getActionFromRequest(request);
         System.out.println("📝 Cabin POST Request: " + action);
 
+        // ✅ ENHANCED: Better action detection
+        String formAction = request.getParameter("action");
+        if (formAction != null && !formAction.trim().isEmpty()) {
+            action = formAction;
+        }
+
         try {
             switch (action) {
                 case "add-cabin":
+                case "add":
                     processAddCabin(request, response);
                     break;
+                case "edit-cabin":
                 case "edit":
                     processEditCabin(request, response);
                     break;
+                case "delete-cabin":
                 case "delete":
                     processDeleteCabin(request, response);
                     break;
+                case "update-cabin-status":
                 case "status":
+                case "updateStatus":
                     processStatusUpdate(request, response);
                     break;
                 default:
-                    response.sendError(HttpServletResponse.SC_BAD_REQUEST, "Invalid action");
+                    System.err.println("❌ Unknown action: " + action);
+                    setErrorMessage(request, "Invalid action: " + action);
+                    response.sendRedirect(request.getContextPath() + "/admin/manage-cabins");
                     break;
             }
         } catch (Exception e) {
@@ -114,7 +126,6 @@ public class CabinController extends HttpServlet {
 
     // ==================== GET REQUEST HANDLERS ====================
 
-    // ✅ UPDATED: Single company add cabin form
     private void showAddCabinForm(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
         System.out.println("📝 Showing add cabin form");
@@ -126,9 +137,7 @@ public class CabinController extends HttpServlet {
         }
 
         try {
-            // ✅ SINGLE COMPANY: Get company configuration instead of all companies
             Company company = companyService.getCompanyConfig();
-
             request.setAttribute("company", company);
             request.setAttribute("admin", currentUser);
 
@@ -142,7 +151,6 @@ public class CabinController extends HttpServlet {
         }
     }
 
-    // ✅ UPDATED: Single company cabin management
     private void showCabinManagement(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
         System.out.println("📋 Showing cabin management dashboard");
@@ -154,21 +162,22 @@ public class CabinController extends HttpServlet {
         }
 
         try {
-            // ✅ SINGLE COMPANY: No company filtering needed
             String statusFilter = request.getParameter("status");
-
             List<Cabin> cabins = cabinService.getAllCabinsForAdmin();
 
             // Filter by status if provided
             if (statusFilter != null && !statusFilter.isEmpty()) {
-                Cabin.Status status = Cabin.Status.valueOf(statusFilter.toUpperCase());
-                cabins = cabins.stream()
-                        .filter(cabin -> cabin.getStatus() == status)
-                        .collect(Collectors.toList());
-                System.out.println("📋 Filtered cabins by status: " + status);
+                try {
+                    Cabin.Status status = Cabin.Status.valueOf(statusFilter.toUpperCase());
+                    cabins = cabins.stream()
+                            .filter(cabin -> cabin.getStatus() == status)
+                            .collect(Collectors.toList());
+                    System.out.println("📋 Filtered cabins by status: " + status);
+                } catch (IllegalArgumentException e) {
+                    System.err.println("❌ Invalid status filter: " + statusFilter);
+                }
             }
 
-            // ✅ SINGLE COMPANY: Get company config for display
             Company company = companyService.getCompanyConfig();
 
             // Cabin statistics
@@ -194,7 +203,6 @@ public class CabinController extends HttpServlet {
         }
     }
 
-    // ✅ UPDATED: Single company edit cabin form
     private void showEditCabinForm(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
         System.out.println("✏️ Showing edit cabin form");
@@ -222,7 +230,6 @@ public class CabinController extends HttpServlet {
                 return;
             }
 
-            // ✅ SINGLE COMPANY: Get company config instead of all companies
             Company company = companyService.getCompanyConfig();
 
             request.setAttribute("admin", currentUser);
@@ -232,13 +239,11 @@ public class CabinController extends HttpServlet {
             System.out.println("✅ Edit form loaded for cabin: " + cabin.getName());
             request.getRequestDispatcher("/admin/edit-cabin.jsp").forward(request, response);
 
-        } catch (NumberFormatException e) {
-            setErrorMessage(request, "Invalid cabin ID");
-            response.sendRedirect(request.getContextPath() + "/admin/manage-cabins");
         } catch (Exception e) {
+            // ✅ FIXED: Single catch block for all exceptions
             System.err.println("❌ Error loading edit cabin form: " + e.getMessage());
-            e.printStackTrace();
-            handleError(request, response, "Error loading edit form", e);
+            setErrorMessage(request, "Error loading edit form. Please check the cabin ID.");
+            response.sendRedirect(request.getContextPath() + "/admin/manage-cabins");
         }
     }
 
@@ -261,7 +266,6 @@ public class CabinController extends HttpServlet {
                 return;
             }
 
-            // Get similar cabins for recommendations
             List<Cabin> similarCabins = cabinService.getSimilarCabins(cabinId);
 
             User currentUser = getCurrentUser(request);
@@ -272,12 +276,10 @@ public class CabinController extends HttpServlet {
             System.out.println("✅ Cabin details loaded: " + cabin.getName());
             request.getRequestDispatcher("/cabin/details.jsp").forward(request, response);
 
-        } catch (NumberFormatException e) {
-            response.sendError(HttpServletResponse.SC_BAD_REQUEST, "Invalid cabin ID");
         } catch (Exception e) {
+            // ✅ FIXED: Single catch block
             System.err.println("❌ Error loading cabin details: " + e.getMessage());
-            e.printStackTrace();
-            handleError(request, response, "Error loading cabin details", e);
+            response.sendError(HttpServletResponse.SC_BAD_REQUEST, "Invalid cabin ID or cabin not found");
         }
     }
 
@@ -326,7 +328,6 @@ public class CabinController extends HttpServlet {
 
     // ==================== POST REQUEST HANDLERS ====================
 
-    // ✅ UPDATED: Single company add cabin process
     private void processAddCabin(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
         System.out.println("➕ Processing add cabin request");
@@ -367,12 +368,10 @@ public class CabinController extends HttpServlet {
             int capacity = Integer.parseInt(capacityStr);
             boolean isVipOnly = "true".equals(isVipOnlyStr) || "on".equals(isVipOnlyStr);
 
-            // ✅ SINGLE COMPANY: Create cabin without company ID parameter
             Cabin cabin = new Cabin(name.trim(), capacity,
                     amenities != null ? amenities.trim() : "",
                     isVipOnly, location.trim());
 
-            // Add cabin using service
             boolean success = cabinService.addCabin(cabin);
 
             if (success) {
@@ -384,19 +383,14 @@ public class CabinController extends HttpServlet {
                 response.sendRedirect(request.getContextPath() + "/admin/add-cabin");
             }
 
-        } catch (NumberFormatException e) {
-            System.err.println("❌ Invalid numeric input in add cabin");
-            setErrorMessage(request, "Please enter valid numeric values for capacity");
-            response.sendRedirect(request.getContextPath() + "/admin/add-cabin");
         } catch (Exception e) {
+            // ✅ FIXED: Single catch block for all exceptions
             System.err.println("❌ Error processing add cabin: " + e.getMessage());
-            e.printStackTrace();
-            setErrorMessage(request, "Error adding cabin. Please try again.");
+            setErrorMessage(request, "Error adding cabin. Please check all input values.");
             response.sendRedirect(request.getContextPath() + "/admin/add-cabin");
         }
     }
 
-    // ✅ UPDATED: Single company edit cabin process
     private void processEditCabin(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
         System.out.println("✏️ Processing edit cabin request");
@@ -445,9 +439,7 @@ public class CabinController extends HttpServlet {
             cabin.setLocation(location.trim());
             cabin.setVipOnly(isVipOnly);
             cabin.setStatus(status);
-            // ✅ SINGLE COMPANY: Company ID remains default (1)
 
-            // Update cabin using service
             boolean success = cabinService.updateCabin(cabin);
 
             if (success) {
@@ -460,9 +452,9 @@ public class CabinController extends HttpServlet {
             response.sendRedirect(request.getContextPath() + "/admin/manage-cabins");
 
         } catch (Exception e) {
+            // ✅ FIXED: Single catch block for all exceptions
             System.err.println("❌ Error processing edit cabin: " + e.getMessage());
-            e.printStackTrace();
-            setErrorMessage(request, "Error updating cabin. Please try again.");
+            setErrorMessage(request, "Error updating cabin. Please check all input values.");
             response.sendRedirect(request.getContextPath() + "/admin/manage-cabins");
         }
     }
@@ -491,7 +483,6 @@ public class CabinController extends HttpServlet {
             Cabin cabin = cabinService.getCabinById(cabinId);
             String cabinName = cabin != null ? cabin.getName() : "Cabin #" + cabinId;
 
-            // Delete cabin using service
             boolean success = cabinService.deleteCabin(cabinId);
 
             if (success) {
@@ -504,9 +495,9 @@ public class CabinController extends HttpServlet {
             response.sendRedirect(request.getContextPath() + "/admin/manage-cabins");
 
         } catch (Exception e) {
+            // ✅ FIXED: Single catch block for all exceptions
             System.err.println("❌ Error processing delete cabin: " + e.getMessage());
-            e.printStackTrace();
-            setErrorMessage(request, "Error deleting cabin. Please try again.");
+            setErrorMessage(request, "Error deleting cabin. Please check the cabin ID.");
             response.sendRedirect(request.getContextPath() + "/admin/manage-cabins");
         }
     }
@@ -525,6 +516,8 @@ public class CabinController extends HttpServlet {
             String cabinIdStr = request.getParameter("cabinId");
             String statusStr = request.getParameter("status");
 
+            System.out.println("📋 Status update parameters - cabinId: " + cabinIdStr + ", status: " + statusStr);
+
             if (cabinIdStr == null || statusStr == null) {
                 setErrorMessage(request, "Cabin ID and status are required");
                 response.sendRedirect(request.getContextPath() + "/admin/manage-cabins");
@@ -534,22 +527,26 @@ public class CabinController extends HttpServlet {
             int cabinId = Integer.parseInt(cabinIdStr);
             Cabin.Status status = Cabin.Status.valueOf(statusStr.toUpperCase());
 
-            // Update status using service
+            // Get cabin for logging
+            Cabin cabin = cabinService.getCabinById(cabinId);
+            String cabinName = cabin != null ? cabin.getName() : "Cabin #" + cabinId;
+
             boolean success = cabinService.updateCabinStatus(cabinId, status);
 
             if (success) {
-                setSuccessMessage(request, "Cabin status updated to " + status + " successfully!");
-                System.out.println("✅ Cabin status updated: " + cabinId + " to " + status);
+                setSuccessMessage(request, "Cabin '" + cabinName + "' status updated to " + status + " successfully!");
+                System.out.println("✅ Cabin status updated: " + cabinName + " to " + status);
             } else {
                 setErrorMessage(request, "Failed to update cabin status. Please try again.");
+                System.err.println("❌ Failed to update cabin status for: " + cabinName);
             }
 
             response.sendRedirect(request.getContextPath() + "/admin/manage-cabins");
 
         } catch (Exception e) {
+            // ✅ FIXED: Single catch block for all exceptions
             System.err.println("❌ Error processing status update: " + e.getMessage());
-            e.printStackTrace();
-            setErrorMessage(request, "Error updating cabin status. Please try again.");
+            setErrorMessage(request, "Error updating cabin status. Please check the parameters.");
             response.sendRedirect(request.getContextPath() + "/admin/manage-cabins");
         }
     }
@@ -574,7 +571,20 @@ public class CabinController extends HttpServlet {
             String contextPath = request.getContextPath();
             String path = requestURI.substring(contextPath.length());
 
-            if (path.startsWith("/admin/cabin/")) {
+            System.out.println("🔍 Processing path: " + path);
+
+            // Handle specific admin cabin routes
+            if (path.equals("/admin/update-cabin-status")) {
+                return "update-cabin-status";
+            } else if (path.equals("/admin/edit-cabin")) {
+                return "edit-cabin";
+            } else if (path.equals("/admin/delete-cabin")) {
+                return "delete-cabin";
+            } else if (path.equals("/admin/add-cabin")) {
+                return "add-cabin";
+            } else if (path.equals("/admin/manage-cabins") || path.equals("/admin/cabins")) {
+                return "manage-cabins";
+            } else if (path.startsWith("/admin/cabin/")) {
                 return path.substring(13); // Remove "/admin/cabin/" prefix
             } else if (path.startsWith("/admin/")) {
                 return path.substring(7); // Remove "/admin/" prefix
@@ -582,7 +592,7 @@ public class CabinController extends HttpServlet {
                 return path.substring(7); // Remove "/cabin/" prefix
             }
 
-            return path.isEmpty() ? "manage-cabins" : path;
+            return path.isEmpty() ? "manage-cabins" : path.substring(1);
 
         } catch (Exception e) {
             System.err.println("❌ Error extracting action: " + e.getMessage());
@@ -593,11 +603,13 @@ public class CabinController extends HttpServlet {
     private void setSuccessMessage(HttpServletRequest request, String message) {
         HttpSession session = request.getSession();
         session.setAttribute("successMessage", message);
+        System.out.println("✅ Success message set: " + message);
     }
 
     private void setErrorMessage(HttpServletRequest request, String message) {
         HttpSession session = request.getSession();
         session.setAttribute("errorMessage", message);
+        System.out.println("❌ Error message set: " + message);
     }
 
     private void handleError(HttpServletRequest request, HttpServletResponse response,

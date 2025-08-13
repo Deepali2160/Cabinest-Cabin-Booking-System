@@ -25,7 +25,6 @@ import java.util.*;
         "/admin/analytics",
         "/admin/users",
         "/admin/bookings",
-        "/admin/cabins",
         "/admin/promote-user",
         "/admin/demote-user"
 })
@@ -311,6 +310,7 @@ public class AdminController extends HttpServlet {
     }
 
     // ✅ CLEAN ANALYTICS METHOD
+    // ✅ ENHANCED ANALYTICS METHOD WITH PROPER CALCULATIONS
     private void showAnalytics(HttpServletRequest request, HttpServletResponse response, User admin)
             throws ServletException, IOException {
 
@@ -321,8 +321,10 @@ public class AdminController extends HttpServlet {
             int normalUsers = 0;
             int vipUsers = 0;
             int adminUsers = 0;
+            int activeUsers = 0; // ✅ ADDED: Active users count
 
             for (User user : allUsers) {
+                // Count by user type
                 if (user.isAdmin()) {
                     adminUsers++;
                 } else if (user.isVIP()) {
@@ -330,15 +332,27 @@ public class AdminController extends HttpServlet {
                 } else {
                     normalUsers++;
                 }
+
+                // ✅ ADDED: Count active users
+                if (user.getStatus() == User.Status.ACTIVE) {
+                    activeUsers++;
+                }
             }
 
             // BOOKING ANALYTICS
             List<Booking> allBookings = bookingService.getAllBookings();
+            int totalBookings = allBookings.size();
             int approvedBookings = 0;
             int pendingBookings = 0;
             int rejectedBookings = 0;
+            int vipBookings = 0; // ✅ ADDED: VIP bookings count
+            int todaysBookings = 0; // ✅ ADDED: Today's bookings
+
+            // ✅ ADDED: Get today's date for filtering
+            Date today = new Date(System.currentTimeMillis());
 
             for (Booking booking : allBookings) {
+                // Count by status
                 if (booking.getStatus() == Booking.Status.APPROVED) {
                     approvedBookings++;
                 } else if (booking.getStatus() == Booking.Status.PENDING) {
@@ -346,30 +360,114 @@ public class AdminController extends HttpServlet {
                 } else if (booking.getStatus() == Booking.Status.REJECTED) {
                     rejectedBookings++;
                 }
+
+                // ✅ ADDED: Count VIP priority bookings
+                if (booking.getPriorityLevel() == Booking.PriorityLevel.VIP) {
+                    vipBookings++;
+                }
+
+                // ✅ ADDED: Count today's bookings
+                if (booking.getBookingDate() != null && booking.getBookingDate().equals(today)) {
+                    todaysBookings++;
+                }
+            }
+
+            // ✅ ADDED: Calculate approval rate percentage
+            double approvalRate = 0.0;
+            if (totalBookings > 0) {
+                approvalRate = (approvedBookings * 100.0) / totalBookings;
+            }
+
+            // ✅ ADDED: Calculate rejection rate percentage
+            double rejectionRate = 0.0;
+            if (totalBookings > 0) {
+                rejectionRate = (rejectedBookings * 100.0) / totalBookings;
+            }
+
+            // ✅ ADDED: Calculate VIP booking percentage
+            double vipBookingRate = 0.0;
+            if (totalBookings > 0) {
+                vipBookingRate = (vipBookings * 100.0) / totalBookings;
             }
 
             // CABIN ANALYTICS
             int totalCabins = cabinService.getTotalCabinCount();
+            int activeCabins = cabinService.getActiveCabinCount(); // ✅ ADDED: Use proper method
+            List<Cabin> vipCabinList = cabinService.getVIPCabins();
+            int vipCabins = vipCabinList.size();
 
-            // SET REQUEST ATTRIBUTES
+            // ✅ ADDED: Calculate maintenance cabins
+            int maintenanceCabins = totalCabins - activeCabins;
+
+            // ✅ ADDED: Calculate utilization rate
+            double utilizationRate = 0.0;
+            if (totalCabins > 0) {
+                utilizationRate = (approvedBookings * 100.0) / (totalCabins * 30); // Assuming 30 days average
+            }
+
+            // ✅ ADDED: Popular time slots from service
+            List<String> popularTimeSlots = bookingService.getPopularTimeSlots();
+            if (popularTimeSlots.isEmpty()) {
+                popularTimeSlots = Arrays.asList("09:00-10:00", "10:00-11:00", "11:00-12:00", "14:00-15:00", "15:00-16:00");
+            }
+
+            // ✅ ADDED: System health metrics
+            Map<String, Object> systemMetrics = new HashMap<>();
+            systemMetrics.put("averageBookingsPerUser", totalUsers > 0 ? (double) totalBookings / totalUsers : 0.0);
+            systemMetrics.put("cabinUtilizationRate", utilizationRate);
+            systemMetrics.put("vipUserPercentage", totalUsers > 0 ? (vipUsers * 100.0) / totalUsers : 0.0);
+            systemMetrics.put("adminUserPercentage", totalUsers > 0 ? (adminUsers * 100.0) / totalUsers : 0.0);
+
+            // SET ALL REQUEST ATTRIBUTES
             request.setAttribute("admin", admin);
+
+            // User Analytics
             request.setAttribute("totalUsers", totalUsers);
             request.setAttribute("normalUsers", normalUsers);
             request.setAttribute("vipUsers", vipUsers);
             request.setAttribute("adminUsers", adminUsers);
-            request.setAttribute("totalBookings", allBookings.size());
+            request.setAttribute("activeUsers", activeUsers); // ✅ FIXED: Active users
+
+            // Booking Analytics
+            request.setAttribute("totalBookings", totalBookings);
             request.setAttribute("approvedBookings", approvedBookings);
             request.setAttribute("pendingBookings", pendingBookings);
             request.setAttribute("rejectedBookings", rejectedBookings);
+            request.setAttribute("vipBookings", vipBookings); // ✅ FIXED: VIP bookings count
+            request.setAttribute("todaysBookings", todaysBookings); // ✅ ADDED: Today's activity
+
+            // ✅ FIXED: Percentage calculations
+            request.setAttribute("approvalRate", Math.round(approvalRate * 100.0) / 100.0); // Round to 2 decimal places
+            request.setAttribute("rejectionRate", Math.round(rejectionRate * 100.0) / 100.0);
+            request.setAttribute("vipBookingRate", Math.round(vipBookingRate * 100.0) / 100.0);
+
+            // Cabin Analytics
             request.setAttribute("totalCabins", totalCabins);
-            request.setAttribute("popularTimeSlots", Arrays.asList("9:00 AM", "10:00 AM", "11:00 AM", "2:00 PM", "3:00 PM"));
+            request.setAttribute("activeCabins", activeCabins);
+            request.setAttribute("vipCabins", vipCabins);
+            request.setAttribute("maintenanceCabins", maintenanceCabins);
+
+            // Enhanced Analytics
+            request.setAttribute("popularTimeSlots", popularTimeSlots);
+            request.setAttribute("systemMetrics", systemMetrics);
+            request.setAttribute("utilizationRate", Math.round(utilizationRate * 100.0) / 100.0);
+
+            System.out.println("📊 Analytics calculated:");
+            System.out.println("   - Total Users: " + totalUsers + " (Active: " + activeUsers + ")");
+            System.out.println("   - Total Bookings: " + totalBookings + " (Approved: " + approvedBookings + ")");
+            System.out.println("   - Approval Rate: " + approvalRate + "%");
+            System.out.println("   - VIP Bookings: " + vipBookings);
+            System.out.println("   - Today's Bookings: " + todaysBookings);
 
             request.getRequestDispatcher("/admin/analytics.jsp").forward(request, response);
 
         } catch (Exception e) {
+            System.err.println("❌ Error in analytics calculation: " + e.getMessage());
+            e.printStackTrace();
             handleError(request, response, "Error loading analytics", e);
         }
     }
+
 
     // ✅ CLEAN CABIN MANAGEMENT METHOD
     private void showCabinManagement(HttpServletRequest request, HttpServletResponse response, User admin)
@@ -380,7 +478,7 @@ public class AdminController extends HttpServlet {
             request.setAttribute("admin", admin);
             request.setAttribute("allCabins", allCabins);
 
-            request.getRequestDispatcher("/admin/cabin-management.jsp").forward(request, response);
+            request.getRequestDispatcher("/admin/manage-cabins.jsp").forward(request, response);
 
         } catch (Exception e) {
             handleError(request, response, "Error loading cabin management", e);
