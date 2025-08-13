@@ -13,7 +13,7 @@ import java.sql.*;
  */
 public class DbUtil {
 
-    private static final String URL = "jdbc:mysql://localhost:3306/cabin_booking?useSSL=false&serverTimezone=UTC";
+    private static final String URL = "jdbc:mysql://localhost:3306/cabin_booking1?useSSL=false&serverTimezone=UTC";
     private static final String USERNAME = "root";
     private static final String PASSWORD = "root";
     private static final String DRIVER_CLASS = "com.mysql.cj.jdbc.Driver";

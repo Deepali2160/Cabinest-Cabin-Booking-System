@@ -6,408 +6,319 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard - Cabin Booking System</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-    <link href="${pageContext.request.contextPath}/css/style.css" rel="stylesheet">
+    <title>Dashboard - Yash Technology Cabin Booking</title>
+    <link href="${pageContext.request.contextPath}/css/common.css" rel="stylesheet">
+    <link href="${pageContext.request.contextPath}/css/dashboard.css" rel="stylesheet">
 </head>
 <body>
-    <!-- Navigation -->
-    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
-        <div class="container">
-            <a class="navbar-brand" href="#">
-                <i class="fas fa-building"></i> Cabin Booking System
-            </a>
+    <!-- Header Navigation -->
+    <nav class="dashboard-nav">
+        <div class="nav-container">
+            <div class="nav-brand">
+                <h2>🏢 Yash Technology</h2>
+                <span>Cabin Booking System</span>
+            </div>
 
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
-                <span class="navbar-toggler-icon"></span>
-            </button>
+            <div class="nav-menu" id="navMenu">
+                <a href="${pageContext.request.contextPath}/dashboard" class="nav-link active">
+                    🏠 Dashboard
+                </a>
+                <a href="${pageContext.request.contextPath}/book" class="nav-link">
+                    📅 New Booking
+                </a>
+                <a href="${pageContext.request.contextPath}/mybookings" class="nav-link">
+                    📋 My Bookings
+                </a>
+                <a href="${pageContext.request.contextPath}/profile" class="nav-link">
+                    👤 Profile
+                </a>
+            </div>
 
-            <div class="collapse navbar-collapse" id="navbarNav">
-                <ul class="navbar-nav me-auto">
-                    <li class="nav-item">
-                        <a class="nav-link active" href="${pageContext.request.contextPath}/dashboard">
-                            <i class="fas fa-tachometer-alt"></i> Dashboard
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="${pageContext.request.contextPath}/book">
-                            <i class="fas fa-plus-circle"></i> New Booking
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="${pageContext.request.contextPath}/mybookings">
-                            <i class="fas fa-calendar-check"></i> My Bookings
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="${pageContext.request.contextPath}/companies">
-                            <i class="fas fa-search"></i> Browse Companies
-                        </a>
-                    </li>
-                </ul>
-
-                <ul class="navbar-nav">
-                    <li class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown">
-                            <i class="fas fa-user-circle"></i> ${user.name}
-                            <c:if test="${user.userType == 'VIP'}">
-                                <span class="badge badge-vip ms-1">VIP</span>
-                            </c:if>
-                            <c:if test="${user.admin}">
-                                <span class="badge bg-danger ms-1">ADMIN</span>
-                            </c:if>
-                        </a>
-                        <ul class="dropdown-menu">
-                            <li><a class="dropdown-item" href="${pageContext.request.contextPath}/profile">
-                                <i class="fas fa-user-edit"></i> Profile</a></li>
-                            <c:if test="${user.admin}">
-                                <li><hr class="dropdown-divider"></li>
-                                <li><a class="dropdown-item" href="${pageContext.request.contextPath}/admin/dashboard">
-                                    <i class="fas fa-cogs"></i> Admin Panel</a></li>
-                            </c:if>
-                            <li><hr class="dropdown-divider"></li>
-                            <li><a class="dropdown-item" href="${pageContext.request.contextPath}/logout">
-                                <i class="fas fa-sign-out-alt"></i> Logout</a></li>
-                        </ul>
-                    </li>
-                </ul>
+            <div class="nav-user">
+                <div class="user-info">
+                    <span class="user-name">${user.name}</span>
+                    <c:if test="${user.userType == 'VIP'}">
+                        <span class="vip-badge">⭐ VIP</span>
+                    </c:if>
+                    <c:if test="${user.admin}">
+                        <span class="admin-badge">👨‍💼 Admin</span>
+                    </c:if>
+                </div>
+                <div class="user-dropdown">
+                    <button class="dropdown-btn" id="userDropdown">⚙️</button>
+                    <div class="dropdown-menu" id="dropdownMenu">
+                        <a href="${pageContext.request.contextPath}/profile">👤 Profile</a>
+                        <c:if test="${user.admin}">
+                            <a href="${pageContext.request.contextPath}/admin/dashboard">🔧 Admin Panel</a>
+                        </c:if>
+                        <a href="${pageContext.request.contextPath}/logout">🚪 Logout</a>
+                    </div>
+                </div>
             </div>
         </div>
     </nav>
 
     <!-- Main Content -->
-    <div class="container mt-4">
+    <main class="dashboard-main">
 
-        <!-- Success/Error Messages -->
-        <c:if test="${not empty sessionScope.successMessage}">
-            <div class="alert alert-success alert-dismissible fade show" role="alert">
-                <i class="fas fa-check-circle"></i> ${sessionScope.successMessage}
-                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-            </div>
-            <c:remove var="successMessage" scope="session"/>
-        </c:if>
+        <!-- Messages -->
+        <div id="message-container">
+            <c:if test="${not empty sessionScope.successMessage}">
+                <div class="message success-message">
+                    ✅ ${sessionScope.successMessage}
+                </div>
+                <c:remove var="successMessage" scope="session"/>
+            </c:if>
 
-        <c:if test="${not empty error}">
-            <div class="alert alert-danger alert-dismissible fade show" role="alert">
-                <i class="fas fa-exclamation-circle"></i> ${error}
-                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-            </div>
-        </c:if>
+            <c:if test="${not empty error}">
+                <div class="message error-message">
+                    ❌ ${error}
+                </div>
+            </c:if>
+        </div>
 
         <!-- Welcome Section -->
-        <div class="row mb-4">
-            <div class="col-12">
-                <div class="card dashboard-card bg-gradient text-white" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
-                    <div class="card-body">
-                        <div class="row align-items-center">
-                            <div class="col-md-8">
-                                <h2 class="mb-2">
-                                    <i class="fas fa-sun"></i> Welcome back, ${user.name}!
-                                </h2>
-                                <p class="mb-2">
-                                    <i class="fas fa-building"></i> ${company.name} - ${company.location}
-                                </p>
-                                <p class="mb-0">
-                                    <i class="fas fa-star"></i> Your Booking Score: <strong>${bookingScore}/100</strong>
-                                    <c:if test="${user.userType == 'VIP'}">
-                                        | <span class="badge badge-vip">VIP Member</span>
-                                    </c:if>
-                                </p>
-                            </div>
-                            <div class="col-md-4 text-center">
-                                <div class="stat-number">${totalBookings}</div>
-                                <div class="stat-label">Total Bookings</div>
-                            </div>
+        <section class="welcome-section">
+            <div class="welcome-card">
+                <div class="welcome-content">
+                    <h1>🌟 Welcome back, ${user.name}!</h1>
+                    <p class="company-info">📍 Yash Technology - Indore</p>
+                    <div class="user-stats">
+                        <div class="stat-item">
+                            <span class="stat-number">${totalBookings}</span>
+                            <span class="stat-label">Total Bookings</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-number">${pendingBookings}</span>
+                            <span class="stat-label">Pending</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-number">${approvedBookings}</span>
+                            <span class="stat-label">Approved</span>
                         </div>
                     </div>
                 </div>
+                <div class="booking-score">
+                    <div class="score-circle">
+                        <span class="score-number">${bookingScore}</span>
+                        <span class="score-max">/100</span>
+                    </div>
+                    <p>Booking Score</p>
+                </div>
             </div>
-        </div>
+        </section>
 
         <!-- Quick Actions -->
-        <div class="row mb-4">
-            <div class="col-md-4 mb-3">
-                <div class="card dashboard-card text-center">
-                    <div class="card-body">
-                        <i class="fas fa-plus-circle fa-3x text-primary mb-3"></i>
-                        <h5>Book a Cabin</h5>
-                        <p class="text-muted">Make a new booking with AI recommendations</p>
-                        <a href="${pageContext.request.contextPath}/book" class="btn btn-primary">
-                            <i class="fas fa-calendar-plus"></i> Book Now
-                        </a>
-                    </div>
-                </div>
-            </div>
+        <section class="actions-section">
+            <h2>⚡ Quick Actions</h2>
+            <div class="action-cards">
+                <a href="${pageContext.request.contextPath}/book" class="action-card">
+                    <div class="action-icon">📅</div>
+                    <h3>Book Cabin</h3>
+                    <p>Reserve a meeting room</p>
+                </a>
 
-            <div class="col-md-4 mb-3">
-                <div class="card dashboard-card text-center">
-                    <div class="card-body">
-                        <i class="fas fa-calendar-check fa-3x text-success mb-3"></i>
-                        <h5>My Bookings</h5>
-                        <p class="text-muted">View and manage your bookings</p>
-                        <a href="${pageContext.request.contextPath}/mybookings" class="btn btn-success">
-                            <i class="fas fa-eye"></i> View All
-                        </a>
-                    </div>
-                </div>
-            </div>
+                <a href="${pageContext.request.contextPath}/mybookings" class="action-card">
+                    <div class="action-icon">📋</div>
+                    <h3>My Bookings</h3>
+                    <p>View booking history</p>
+                </a>
 
-            <div class="col-md-4 mb-3">
-                <div class="card dashboard-card text-center">
-                    <div class="card-body">
-                        <i class="fas fa-search fa-3x text-info mb-3"></i>
-                        <h5>Browse Cabins</h5>
-                        <p class="text-muted">Explore available meeting rooms</p>
-                        <a href="${pageContext.request.contextPath}/company/browse" class="btn btn-info">
-                            <i class="fas fa-compass"></i> Explore
-                        </a>
-                    </div>
-                </div>
+                <a href="${pageContext.request.contextPath}/profile" class="action-card">
+                    <div class="action-icon">⚙️</div>
+                    <h3>Profile</h3>
+                    <p>Update account settings</p>
+                </a>
             </div>
-        </div>
+        </section>
 
-        <!-- AI Recommendations Section -->
-        <c:if test="${not empty recommendedCabins}">
-            <div class="row mb-4">
-                <div class="col-12">
-                    <div class="card dashboard-card">
-                        <div class="card-header bg-gradient text-white" style="background: linear-gradient(45deg, #6f42c1, #9c27b0);">
-                            <h5 class="mb-0">
-                                <i class="fas fa-robot"></i> AI Recommendations for You
-                                <span class="ai-badge badge ms-2">AI POWERED</span>
-                            </h5>
-                        </div>
-                        <div class="card-body">
-                            <p class="text-muted mb-3">Based on your booking history and preferences:</p>
-                            <div class="row">
-                                <c:forEach var="cabin" items="${recommendedCabins}" varStatus="status">
-                                    <c:if test="${status.index < 3}">
-                                        <div class="col-md-4 mb-3">
-                                            <div class="card ai-recommendation">
-                                                <div class="card-body">
-                                                    <div class="d-flex justify-content-between align-items-start mb-2">
-                                                        <h6 class="card-title mb-0">${cabin.name}</h6>
-                                                        <c:if test="${cabin.vipOnly}">
-                                                            <span class="badge badge-vip">VIP Only</span>
-                                                        </c:if>
-                                                    </div>
-                                                    <p class="card-text small text-muted mb-2">
-                                                        <i class="fas fa-users"></i> Capacity: ${cabin.capacity} people<br>
-                                                        <i class="fas fa-map-marker-alt"></i> ${cabin.location}
-                                                    </p>
-                                                    <c:if test="${not empty cabin.amenities}">
-                                                        <p class="small mb-2">
-                                                            <i class="fas fa-star"></i> ${cabin.amenities}
-                                                        </p>
-                                                    </c:if>
-                                                    <a href="${pageContext.request.contextPath}/book?cabinId=${cabin.cabinId}"
-                                                       class="btn btn-sm btn-outline-primary">
-                                                        <i class="fas fa-calendar-plus"></i> Book This
-                                                    </a>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </c:if>
-                                </c:forEach>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </c:if>
+        <!-- Main Content Grid -->
+        <div class="dashboard-grid">
 
-        <!-- Available Cabins & Recent Bookings -->
-        <div class="row">
             <!-- Available Cabins -->
-            <div class="col-md-8 mb-4">
-                <div class="card dashboard-card">
-                    <div class="card-header d-flex justify-content-between align-items-center">
-                        <h5 class="mb-0">
-                            <i class="fas fa-home"></i> Available Cabins (${company.name})
-                        </h5>
-                        <small class="text-muted">${cabins.size()} cabins available</small>
-                    </div>
-                    <div class="card-body">
-                        <c:if test="${empty cabins}">
-                            <div class="text-center py-4">
-                                <i class="fas fa-info-circle fa-2x text-muted mb-2"></i>
-                                <p class="text-muted">No cabins available for your access level.</p>
-                            </div>
-                        </c:if>
-
-                        <div class="row">
-                            <c:forEach var="cabin" items="${cabins}" varStatus="status">
-                                <c:if test="${status.index < 6}">
-                                    <div class="col-md-6 mb-3">
-                                        <div class="card border">
-                                            <div class="card-body p-3">
-                                                <div class="d-flex justify-content-between align-items-start mb-2">
-                                                    <h6 class="card-title mb-0">${cabin.name}</h6>
-                                                    <div>
-                                                        <c:if test="${cabin.vipOnly}">
-                                                            <span class="badge badge-vip">VIP</span>
-                                                        </c:if>
-                                                        <c:choose>
-                                                            <c:when test="${cabin.status == 'ACTIVE'}">
-                                                                <span class="badge bg-success">Available</span>
-                                                            </c:when>
-                                                            <c:when test="${cabin.status == 'MAINTENANCE'}">
-                                                                <span class="badge bg-warning">Maintenance</span>
-                                                            </c:when>
-                                                            <c:otherwise>
-                                                                <span class="badge bg-secondary">Inactive</span>
-                                                            </c:otherwise>
-                                                        </c:choose>
-                                                    </div>
-                                                </div>
-                                                <p class="card-text small mb-2">
-                                                    <i class="fas fa-users"></i> ${cabin.capacity} people |
-                                                    <i class="fas fa-map-marker-alt"></i> ${cabin.location}
-                                                </p>
-                                                <c:if test="${cabin.status == 'ACTIVE'}">
-                                                    <a href="${pageContext.request.contextPath}/book?cabinId=${cabin.cabinId}"
-                                                       class="btn btn-sm btn-primary">
-                                                        <i class="fas fa-calendar-plus"></i> Book
-                                                    </a>
-                                                </c:if>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </c:if>
-                            </c:forEach>
-                        </div>
-
-                        <c:if test="${cabins.size() > 6}">
-                            <div class="text-center mt-3">
-                                <a href="${pageContext.request.contextPath}/company/${company.companyId}"
-                                   class="btn btn-outline-primary">
-                                    <i class="fas fa-eye"></i> View All Cabins (${cabins.size()})
-                                </a>
-                            </div>
-                        </c:if>
-                    </div>
+            <section class="cabins-section">
+                <div class="section-header">
+                    <h2>🏠 Available Cabins</h2>
+                    <span class="cabin-count">${cabins.size()} available</span>
                 </div>
-            </div>
 
-            <!-- Recent Bookings & Popular Times -->
-            <div class="col-md-4">
-                <!-- Recent Bookings -->
-                <div class="card dashboard-card mb-4">
-                    <div class="card-header">
-                        <h6 class="mb-0">
-                            <i class="fas fa-history"></i> Recent Bookings
-                        </h6>
-                    </div>
-                    <div class="card-body">
-                        <c:if test="${empty recentBookings}">
-                            <div class="text-center py-3">
-                                <i class="fas fa-calendar text-muted fa-2x mb-2"></i>
-                                <p class="text-muted small mb-0">No recent bookings</p>
-                            </div>
-                        </c:if>
+                <div class="cabins-grid">
+                    <c:if test="${empty cabins}">
+                        <div class="empty-state">
+                            <div class="empty-icon">🏢</div>
+                            <p>No cabins available for your access level</p>
+                        </div>
+                    </c:if>
 
-                        <c:forEach var="booking" items="${recentBookings}">
-                            <div class="d-flex justify-content-between align-items-center mb-2 p-2 border-bottom">
-                                <div>
-                                    <div class="fw-bold small">${booking.cabinName}</div>
-                                    <div class="text-muted small">
-                                        <fmt:formatDate value="${booking.bookingDate}" pattern="MMM dd, yyyy"/>
-                                        | ${booking.timeSlot}
+                    <c:forEach var="cabin" items="${cabins}" varStatus="status">
+                        <c:if test="${status.index < 6}">
+                            <div class="cabin-card">
+                                <div class="cabin-header">
+                                    <h4>${cabin.name}</h4>
+                                    <div class="cabin-badges">
+                                        <c:if test="${cabin.vipOnly}">
+                                            <span class="vip-badge">⭐ VIP</span>
+                                        </c:if>
+                                        <c:choose>
+                                            <c:when test="${cabin.status == 'ACTIVE'}">
+                                                <span class="status-badge available">✅ Available</span>
+                                            </c:when>
+                                            <c:when test="${cabin.status == 'MAINTENANCE'}">
+                                                <span class="status-badge maintenance">🔧 Maintenance</span>
+                                            </c:when>
+                                            <c:otherwise>
+                                                <span class="status-badge inactive">❌ Inactive</span>
+                                            </c:otherwise>
+                                        </c:choose>
                                     </div>
                                 </div>
-                                <div>
+
+                                <div class="cabin-info">
+                                    <p>👥 ${cabin.capacity} people</p>
+                                    <p>📍 ${cabin.location}</p>
+                                    <c:if test="${not empty cabin.amenities}">
+                                        <p class="amenities">✨ ${cabin.amenities}</p>
+                                    </c:if>
+                                </div>
+
+                                <c:if test="${cabin.status == 'ACTIVE'}">
+                                    <a href="${pageContext.request.contextPath}/book?cabinId=${cabin.cabinId}"
+                                       class="book-btn">
+                                        📅 Book Now
+                                    </a>
+                                </c:if>
+                            </div>
+                        </c:if>
+                    </c:forEach>
+                </div>
+
+                <c:if test="${cabins.size() > 6}">
+                    <div class="view-all">
+                        <a href="${pageContext.request.contextPath}/company" class="view-all-btn">
+                            👁️ View All Cabins (${cabins.size()})
+                        </a>
+                    </div>
+                </c:if>
+            </section>
+
+            <!-- Sidebar -->
+            <aside class="dashboard-sidebar">
+
+                <!-- Recent Bookings -->
+                <section class="recent-section">
+                    <h3>📅 Recent Bookings</h3>
+
+                    <c:if test="${empty recentBookings}">
+                        <div class="empty-state small">
+                            <div class="empty-icon">📅</div>
+                            <p>No recent bookings</p>
+                        </div>
+                    </c:if>
+
+                    <div class="booking-list">
+                        <c:forEach var="booking" items="${recentBookings}">
+                            <div class="booking-item">
+                                <div class="booking-info">
+                                    <h5>${booking.cabinName}</h5>
+                                    <p class="booking-date">
+                                        <fmt:formatDate value="${booking.bookingDate}" pattern="MMM dd, yyyy"/>
+                                    </p>
+                                    <p class="booking-time">${booking.timeSlot}</p>
+                                </div>
+                                <div class="booking-status">
                                     <c:choose>
                                         <c:when test="${booking.status == 'PENDING'}">
-                                            <span class="badge badge-pending">Pending</span>
+                                            <span class="status-badge pending">⏳ Pending</span>
                                         </c:when>
                                         <c:when test="${booking.status == 'APPROVED'}">
-                                            <span class="badge badge-approved">Approved</span>
+                                            <span class="status-badge approved">✅ Approved</span>
                                         </c:when>
                                         <c:when test="${booking.status == 'REJECTED'}">
-                                            <span class="badge badge-rejected">Rejected</span>
+                                            <span class="status-badge rejected">❌ Rejected</span>
                                         </c:when>
                                         <c:otherwise>
-                                            <span class="badge bg-secondary">${booking.status}</span>
+                                            <span class="status-badge">${booking.status}</span>
                                         </c:otherwise>
                                     </c:choose>
                                 </div>
                             </div>
                         </c:forEach>
-
-                        <c:if test="${not empty recentBookings}">
-                            <div class="text-center mt-3">
-                                <a href="${pageContext.request.contextPath}/mybookings"
-                                   class="btn btn-sm btn-outline-primary">
-                                    <i class="fas fa-eye"></i> View All
-                                </a>
-                            </div>
-                        </c:if>
                     </div>
-                </div>
 
-                <!-- Popular Time Slots -->
-                <div class="card dashboard-card">
-                    <div class="card-header">
-                        <h6 class="mb-0">
-                            <i class="fas fa-clock"></i> Popular Time Slots
-                            <span class="ai-badge badge ms-2">AI INSIGHTS</span>
-                        </h6>
-                    </div>
-                    <div class="card-body">
-                        <c:if test="${empty popularTimeSlots}">
-                            <p class="text-muted small">No data available</p>
-                        </c:if>
+                    <c:if test="${not empty recentBookings}">
+                        <a href="${pageContext.request.contextPath}/mybookings" class="view-all-link">
+                            👁️ View All Bookings
+                        </a>
+                    </c:if>
+                </section>
 
+                <!-- Popular Times -->
+                <section class="popular-section">
+                    <h3>🕐 Popular Time Slots</h3>
+
+                    <c:if test="${empty popularTimeSlots}">
+                        <p class="no-data">No data available</p>
+                    </c:if>
+
+                    <div class="popular-list">
                         <c:forEach var="timeSlot" items="${popularTimeSlots}" varStatus="status">
                             <c:if test="${status.index < 5}">
-                                <div class="d-flex justify-content-between align-items-center mb-2">
-                                    <span class="small">${timeSlot}</span>
-                                    <span class="badge bg-info">Popular</span>
+                                <div class="popular-item">
+                                    <span class="time-slot">${timeSlot}</span>
+                                    <span class="popular-badge">🔥 Popular</span>
                                 </div>
                             </c:if>
                         </c:forEach>
-
-                        <div class="text-center mt-3">
-                            <small class="text-muted">
-                                <i class="fas fa-lightbulb"></i> AI recommends booking during less popular times
-                            </small>
-                        </div>
                     </div>
-                </div>
-            </div>
+
+                    <div class="tip">
+                        💡 Book during less popular times for better availability
+                    </div>
+                </section>
+            </aside>
         </div>
-    </div>
+
+        <!-- Recommended Cabins -->
+        <c:if test="${not empty recommendedCabins}">
+            <section class="recommendations-section">
+                <h2>💡 Recommended for You</h2>
+                <p class="recommendations-subtitle">Based on your booking history</p>
+
+                <div class="recommendations-grid">
+                    <c:forEach var="cabin" items="${recommendedCabins}" varStatus="status">
+                        <c:if test="${status.index < 3}">
+                            <div class="recommendation-card">
+                                <div class="recommendation-header">
+                                    <h4>${cabin.name}</h4>
+                                    <c:if test="${cabin.vipOnly}">
+                                        <span class="vip-badge">⭐ VIP</span>
+                                    </c:if>
+                                </div>
+                                <div class="recommendation-info">
+                                    <p>👥 ${cabin.capacity} people</p>
+                                    <p>📍 ${cabin.location}</p>
+                                    <c:if test="${not empty cabin.amenities}">
+                                        <p class="amenities">✨ ${cabin.amenities}</p>
+                                    </c:if>
+                                </div>
+                                <a href="${pageContext.request.contextPath}/book?cabinId=${cabin.cabinId}"
+                                   class="recommendation-btn">
+                                    📅 Book This
+                                </a>
+                            </div>
+                        </c:if>
+                    </c:forEach>
+                </div>
+            </section>
+        </c:if>
+    </main>
 
     <!-- Footer -->
-    <footer class="bg-dark text-light text-center py-3 mt-5">
-        <div class="container">
-            <p class="mb-0">&copy; 2024 Cabin Booking System with AI Recommendations</p>
-        </div>
+    <footer class="dashboard-footer">
+        <p>&copy; 2024 Yash Technology - Cabin Booking System</p>
     </footer>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
-
-    <script>
-        // Auto-hide alerts after 5 seconds
-        setTimeout(function() {
-            const alerts = document.querySelectorAll('.alert-dismissible');
-            alerts.forEach(alert => {
-                const closeButton = alert.querySelector('.btn-close');
-                if (closeButton) {
-                    closeButton.click();
-                }
-            });
-        }, 5000);
-
-        // Add loading animation to buttons
-        document.querySelectorAll('a[href*="book"]').forEach(button => {
-            button.addEventListener('click', function() {
-                if (!this.classList.contains('disabled')) {
-                    this.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Loading...';
-                }
-            });
-        });
-    </script>
+    <script src="${pageContext.request.contextPath}/js/common.js"></script>
+    <script src="${pageContext.request.contextPath}/js/dashboard.js"></script>
 </body>
 </html>

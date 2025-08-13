@@ -8,7 +8,12 @@ import com.yash.cabinbooking.daoimpl.CabinDaoImpl;
 import com.yash.cabinbooking.model.Booking;
 import com.yash.cabinbooking.model.User;
 import com.yash.cabinbooking.model.Cabin;
+import com.yash.cabinbooking.util.DbUtil;
+
+import java.sql.Connection;
 import java.sql.Date;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
 import java.util.List;
 import java.util.ArrayList;
 import java.util.regex.Pattern;
@@ -219,6 +224,20 @@ public class BookingServiceImpl implements BookingService {
     public List<Booking> getBookingsForAdmin() {
         System.out.println("👨‍💼 Fetching all bookings for admin dashboard");
         return bookingDAO.getAllBookings();
+    }
+
+
+    // ✅ ADD THESE TWO METHODS HERE:
+    @Override
+    public List<Booking> getAllBookings() {
+        System.out.println("📋 Fetching all bookings for admin");
+        return bookingDAO.getAllBookings();
+    }
+
+    @Override
+    public List<Booking> getRecentBookings(int limit) {
+        System.out.println("📋 Fetching recent " + limit + " bookings");
+        return bookingDAO.getRecentBookings(limit);
     }
 
     @Override
@@ -580,4 +599,55 @@ public class BookingServiceImpl implements BookingService {
 
         return timeSlots;
     }
+    @Override
+    public boolean approveBooking(int bookingId, int adminId) {
+        try {
+            return bookingDAO.approveBooking(bookingId, adminId);
+        } catch (Exception e) {
+            System.err.println("❌ Error approving booking: " + e.getMessage());
+            return false;
+        }
+    }
+
+    @Override
+    public boolean rejectBooking(int bookingId, int adminId) {
+        try {
+            return bookingDAO.rejectBooking(bookingId, adminId);
+        } catch (Exception e) {
+            System.err.println("❌ Error rejecting booking: " + e.getMessage());
+            return false;
+        }
+    }
+
+
+// Add this method to your BookingServiceImpl class
+
+    @Override
+    public int getBookingCountByUserId(int userId) {
+        try {
+            String sql = "SELECT COUNT(*) FROM bookings WHERE user_id = ?";
+
+            Connection connection = DbUtil.getConnection();
+            PreparedStatement statement = connection.prepareStatement(sql);
+            statement.setInt(1, userId);
+
+            ResultSet resultSet = statement.executeQuery();
+            int count = 0;
+
+            if (resultSet.next()) {
+                count = resultSet.getInt(1);
+            }
+
+            resultSet.close();
+            statement.close();
+            connection.close();
+
+            return count;
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            return 0;
+        }
+    }
+
 }

@@ -14,16 +14,15 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpSession;
 import java.io.IOException;
-import java.util.List;
 
 /**
- * AUTHENTICATION CONTROLLER - FIXED VERSION
+ * AUTHENTICATION CONTROLLER - SINGLE COMPANY VERSION
  *
- * FIXES APPLIED:
- * - Added "admin" session attribute for JSP compatibility
- * - Enhanced role-based redirect logic for SUPER_ADMIN
- * - Improved session management for all user types
- * - Added proper admin session attributes in registration
+ * Modified for Yash Technology single company usage
+ * - Enhanced session management for all user types
+ * - Improved role-based redirect logic
+ * - Single company registration process
+ * - Fixed admin session attributes for JSP compatibility
  */
 @WebServlet(name = "AuthController", urlPatterns = {"/auth", "/login", "/logout", "/register"})
 public class AuthController extends HttpServlet {
@@ -31,11 +30,15 @@ public class AuthController extends HttpServlet {
     private UserService userService;
     private CompanyService companyService;
 
+    // ✅ SINGLE COMPANY: Static constants
+    private static final String COMPANY_NAME = "Yash Technology";
+    private static final int DEFAULT_COMPANY_ID = 1;
+
     @Override
     public void init() throws ServletException {
         this.userService = new UserServiceImpl();
         this.companyService = new CompanyServiceImpl();
-        System.out.println("🔧 AuthController initialized successfully");
+        System.out.println("🔧 AuthController initialized for " + COMPANY_NAME + " (Single Company)");
     }
 
     @Override
@@ -83,7 +86,7 @@ public class AuthController extends HttpServlet {
 
     private void showLoginPage(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
-        System.out.println("🔐 Showing login page");
+        System.out.println("🔐 Showing login page for " + COMPANY_NAME);
 
         // Check if user is already logged in
         HttpSession session = request.getSession(false);
@@ -91,29 +94,34 @@ public class AuthController extends HttpServlet {
             User user = (User) session.getAttribute("user");
             System.out.println("✅ User already logged in: " + user.getName() + ", redirecting to appropriate dashboard");
 
-            // Redirect to appropriate dashboard based on user type
             String redirectUrl = determineRedirectUrl(user);
             response.sendRedirect(request.getContextPath() + redirectUrl);
             return;
         }
 
+        // ✅ SINGLE COMPANY: Set company info for login page
+        request.setAttribute("companyName", COMPANY_NAME);
         request.getRequestDispatcher("/common/login.jsp").forward(request, response);
     }
 
     private void showRegistrationPage(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
-        System.out.println("📝 Showing registration page");
+        System.out.println("📝 Showing registration page for " + COMPANY_NAME);
 
-        // Get companies for registration form
-        List<Company> companies = companyService.getAllActiveCompanies();
-        request.setAttribute("companies", companies);
+        // ✅ SINGLE COMPANY: Get company configuration
+        Company company = companyService.getCompanyConfig();
+        if (company == null) {
+            company = createDefaultCompany();
+        }
 
+        request.setAttribute("company", company);
+        request.setAttribute("companyName", COMPANY_NAME);
         request.getRequestDispatcher("/common/register.jsp").forward(request, response);
     }
 
     private void handleLogin(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
-        System.out.println("🔐 Processing login request");
+        System.out.println("🔐 Processing login request for " + COMPANY_NAME);
 
         String email = request.getParameter("email");
         String password = request.getParameter("password");
@@ -135,9 +143,9 @@ public class AuthController extends HttpServlet {
 
         if (user != null) {
             // Successful login
-            System.out.println("✅ Login successful for: " + user.getName() + " (" + user.getUserTypeDisplay() + ")");
+            System.out.println("✅ Login successful for: " + user.getName() + " (" + user.getUserTypeDisplay() + ") at " + COMPANY_NAME);
 
-            // ✅ FIXED: Create comprehensive session with all required attributes
+            // ✅ ENHANCED: Create comprehensive session with all required attributes
             HttpSession session = request.getSession(true);
 
             // Core user attributes
@@ -151,13 +159,19 @@ public class AuthController extends HttpServlet {
             session.setAttribute("userEmail", user.getEmail());
             session.setAttribute("isAdmin", user.isAdmin());
             session.setAttribute("isVip", user.isVIP());
+            session.setAttribute("isSuperAdmin", user.isSuperAdmin());
+
+            // ✅ SINGLE COMPANY: Company-specific session attributes
+            session.setAttribute("companyName", COMPANY_NAME);
+            session.setAttribute("companyId", DEFAULT_COMPANY_ID);
 
             // Set session timeout (30 minutes)
             session.setMaxInactiveInterval(30 * 60);
 
-            System.out.println("🎉 Complete session created for user: " + user.getName() + " (Type: " + user.getUserType() + ")");
+            System.out.println("🎉 Complete session created for user: " + user.getName() +
+                    " (Type: " + user.getUserType() + ") - Company: " + COMPANY_NAME);
 
-            // ✅ FIXED: Enhanced redirect logic with better role separation
+            // ✅ ENHANCED: Role-based redirect logic
             String redirectUrl = determineRedirectUrl(user);
             System.out.println("🚀 Redirecting to: " + redirectUrl);
             response.sendRedirect(request.getContextPath() + redirectUrl);
@@ -173,15 +187,14 @@ public class AuthController extends HttpServlet {
 
     private void handleRegistration(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
-        System.out.println("📝 Processing registration request");
+        System.out.println("📝 Processing registration request for " + COMPANY_NAME);
 
         String name = request.getParameter("name");
         String email = request.getParameter("email");
         String password = request.getParameter("password");
         String confirmPassword = request.getParameter("confirmPassword");
-        String companyIdStr = request.getParameter("companyId");
 
-        System.out.println("👤 Registration attempt for: " + name + " (" + email + ")");
+        System.out.println("👤 Registration attempt for: " + name + " (" + email + ") at " + COMPANY_NAME);
 
         // Input validation
         String validationError = validateRegistrationInput(name, email, password, confirmPassword);
@@ -194,16 +207,6 @@ public class AuthController extends HttpServlet {
             return;
         }
 
-        // Parse company ID
-        int companyId = 1; // Default company
-        if (companyIdStr != null && !companyIdStr.trim().isEmpty()) {
-            try {
-                companyId = Integer.parseInt(companyIdStr);
-            } catch (NumberFormatException e) {
-                System.err.println("❌ Invalid company ID: " + companyIdStr);
-            }
-        }
-
         // Check if email already exists
         if (!userService.isEmailAvailable(email)) {
             System.err.println("❌ Email already exists: " + email);
@@ -213,18 +216,19 @@ public class AuthController extends HttpServlet {
             return;
         }
 
-        // Create new user
+        // ✅ SINGLE COMPANY: Create new user with default company
         User newUser = new User(name.trim(), email.trim().toLowerCase(), password);
-        newUser.setDefaultCompanyId(companyId);
+        newUser.setDefaultCompanyId(DEFAULT_COMPANY_ID);
         newUser.setUserType(User.UserType.NORMAL); // Default to normal user
         newUser.setStatus(User.Status.ACTIVE);
 
         boolean registrationSuccess = userService.registerUser(newUser);
 
         if (registrationSuccess) {
-            System.out.println("✅ Registration successful for: " + newUser.getName() + " (ID: " + newUser.getUserId() + ")");
+            System.out.println("✅ Registration successful for: " + newUser.getName() +
+                    " (ID: " + newUser.getUserId() + ") at " + COMPANY_NAME);
 
-            // ✅ FIXED: Auto-login with complete session setup
+            // ✅ ENHANCED: Auto-login with complete session setup
             HttpSession session = request.getSession(true);
 
             // Core user attributes
@@ -238,17 +242,22 @@ public class AuthController extends HttpServlet {
             session.setAttribute("userEmail", newUser.getEmail());
             session.setAttribute("isAdmin", newUser.isAdmin());
             session.setAttribute("isVip", newUser.isVIP());
+            session.setAttribute("isSuperAdmin", newUser.isSuperAdmin());
+
+            // ✅ SINGLE COMPANY: Company-specific attributes
+            session.setAttribute("companyName", COMPANY_NAME);
+            session.setAttribute("companyId", DEFAULT_COMPANY_ID);
 
             session.setMaxInactiveInterval(30 * 60);
 
-            System.out.println("🎉 Auto-login successful, redirecting to dashboard");
+            System.out.println("🎉 Auto-login successful for " + COMPANY_NAME + ", redirecting to dashboard");
 
             // Set success message
-            session.setAttribute("successMessage", "Welcome! Your account has been created successfully.");
+            session.setAttribute("successMessage",
+                    "Welcome to " + COMPANY_NAME + "! Your account has been created successfully.");
 
-            // Redirect to appropriate dashboard (though new users will be NORMAL)
-            String redirectUrl = determineRedirectUrl(newUser);
-            response.sendRedirect(request.getContextPath() + redirectUrl);
+            // Redirect to user dashboard (new users are always NORMAL)
+            response.sendRedirect(request.getContextPath() + "/dashboard");
 
         } else {
             System.err.println("❌ Registration failed for: " + email);
@@ -267,7 +276,8 @@ public class AuthController extends HttpServlet {
         if (session != null) {
             User user = (User) session.getAttribute("user");
             if (user != null) {
-                System.out.println("👋 Logging out user: " + user.getName() + " (" + user.getUserTypeDisplay() + ")");
+                System.out.println("👋 Logging out user: " + user.getName() +
+                        " (" + user.getUserTypeDisplay() + ") from " + COMPANY_NAME);
             }
 
             session.invalidate();
@@ -275,11 +285,13 @@ public class AuthController extends HttpServlet {
         }
 
         // Redirect to login page with logout message
-        request.setAttribute("message", "You have been logged out successfully");
+        request.setAttribute("message", "You have been logged out successfully from " + COMPANY_NAME);
         showLoginPage(request, response);
     }
 
+    // ================================
     // UTILITY METHODS
+    // ================================
 
     private String getActionFromRequest(HttpServletRequest request) {
         String requestURI = request.getRequestURI();
@@ -294,25 +306,29 @@ public class AuthController extends HttpServlet {
     }
 
     /**
-     * ✅ FIXED: Enhanced redirect logic with proper role separation
+     * ✅ ENHANCED: Role-based redirect logic for single company
      */
     private String determineRedirectUrl(User user) {
         switch (user.getUserType()) {
             case SUPER_ADMIN:
-                System.out.println("🔱 Super Admin detected: " + user.getName() + ", redirecting to admin dashboard");
-                return "/admin/dashboard";  // Super Admin uses same admin dashboard but with more features
+                System.out.println("🔱 Super Admin detected: " + user.getName() +
+                        ", redirecting to admin dashboard with full privileges");
+                return "/admin/dashboard";
 
             case ADMIN:
-                System.out.println("👨‍💼 Admin detected: " + user.getName() + ", redirecting to admin dashboard");
+                System.out.println("👨‍💼 Admin detected: " + user.getName() +
+                        ", redirecting to admin dashboard");
                 return "/admin/dashboard";
 
             case VIP:
-                System.out.println("⭐ VIP user detected: " + user.getName() + ", redirecting to VIP dashboard");
-             return "/dashboard";     // Or use same dashboard with VIP features
+                System.out.println("⭐ VIP user detected: " + user.getName() +
+                        ", redirecting to VIP-enhanced dashboard");
+                return "/dashboard";
 
             case NORMAL:
             default:
-                System.out.println("👤 Normal user detected: " + user.getName() + ", redirecting to user dashboard");
+                System.out.println("👤 Normal user detected: " + user.getName() +
+                        ", redirecting to user dashboard");
                 return "/dashboard";
         }
     }
@@ -352,5 +368,15 @@ public class AuthController extends HttpServlet {
 
         String emailPattern = "^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$";
         return email.matches(emailPattern);
+    }
+
+    // ✅ NEW: Create default company for fallback
+    private Company createDefaultCompany() {
+        Company defaultCompany = new Company();
+        defaultCompany.setCompanyId(DEFAULT_COMPANY_ID);
+        defaultCompany.setName(COMPANY_NAME);
+        defaultCompany.setLocation("Indore");
+        defaultCompany.setContactInfo("contact@yashtech.com");
+        return defaultCompany;
     }
 }

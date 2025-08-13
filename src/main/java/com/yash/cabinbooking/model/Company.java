@@ -3,12 +3,7 @@ package com.yash.cabinbooking.model;
 import java.sql.Timestamp;
 
 /**
- * COMPANY MODEL CLASS
- *
- * EVALUATION EXPLANATION:
- * - Represents companies that own cabins
- * - Simple POJO with business logic methods
- * - Status enum for company state management
+ * COMPANY MODEL CLASS - SINGLE COMPANY VERSION
  */
 public class Company {
 
@@ -16,41 +11,64 @@ public class Company {
         ACTIVE, INACTIVE
     }
 
-    private int companyId;
-    private String name;
-    private String location;
-    private String contactInfo;
-    private Status status;
-    private Timestamp createdAt;
+    // Static constants for single company
+    private static final String DEFAULT_COMPANY_NAME = "Yash Technology";
+    private static final String DEFAULT_LOCATION = "Indore";
+    private static final String DEFAULT_CONTACT = "contact@yashtech.com";
 
-    // Default Constructor
+    private int companyId = 1; // ✅ ADD: Default company ID
+    private String companyName;
+    private String companyLocation;
+    private String companyContact;
+    private Status companyStatus;
+    private Timestamp updatedAt;
+
+    // Default Constructor - Single Company Setup
     public Company() {
-        this.status = Status.ACTIVE;
-        System.out.println("🏢 New Company object created");
+        this.companyId = 1; // ✅ ADD: Set default ID
+        this.companyName = DEFAULT_COMPANY_NAME;
+        this.companyLocation = DEFAULT_LOCATION;
+        this.companyContact = DEFAULT_CONTACT;
+        this.companyStatus = Status.ACTIVE;
+        System.out.println("🏢 Yash Technology Company object created");
     }
 
-    // Constructor for creating new company
-    public Company(String name, String location, String contactInfo) {
-        this();
-        this.name = name;
-        this.location = location;
-        this.contactInfo = contactInfo;
-        System.out.println("🏢 Company created: " + name);
+    // Constructor for company config updates
+    public Company(String companyName, String companyLocation, String companyContact) {
+        this.companyId = 1; // ✅ ADD: Set default ID
+        this.companyName = companyName;
+        this.companyLocation = companyLocation;
+        this.companyContact = companyContact;
+        this.companyStatus = Status.ACTIVE;
+        System.out.println("🏢 Company config updated: " + companyName);
     }
 
-    // Full Constructor (from database)
-    public Company(int companyId, String name, String location, String contactInfo,
-                   Status status, Timestamp createdAt) {
-        this.companyId = companyId;
-        this.name = name;
-        this.location = location;
-        this.contactInfo = contactInfo;
-        this.status = status;
-        this.createdAt = createdAt;
-        System.out.println("💾 Company loaded from database: " + name);
+    // Full Constructor (from company_config table)
+    public Company(String companyName, String companyLocation, String companyContact,
+                   Status companyStatus, Timestamp updatedAt) {
+        this.companyId = 1; // ✅ ADD: Set default ID
+        this.companyName = companyName;
+        this.companyLocation = companyLocation;
+        this.companyContact = companyContact;
+        this.companyStatus = companyStatus;
+        this.updatedAt = updatedAt;
+        System.out.println("💾 Company loaded from config: " + companyName);
     }
 
-    // Getters and Setters
+    // Static method to get default company instance
+    public static Company getDefaultCompany() {
+        return new Company();
+    }
+
+    // ✅ ADD: Missing methods for CabinController compatibility
+    public String getName() {
+        return this.companyName;
+    }
+
+    public void setName(String name) {
+        this.companyName = name;
+    }
+
     public int getCompanyId() {
         return companyId;
     }
@@ -59,61 +77,82 @@ public class Company {
         this.companyId = companyId;
     }
 
-    public String getName() {
-        return name;
-    }
-
-    public void setName(String name) {
-        this.name = name;
-    }
-
     public String getLocation() {
-        return location;
+        return this.companyLocation;
     }
 
     public void setLocation(String location) {
-        this.location = location;
+        this.companyLocation = location;
     }
 
     public String getContactInfo() {
-        return contactInfo;
+        return this.companyContact;
     }
 
     public void setContactInfo(String contactInfo) {
-        this.contactInfo = contactInfo;
+        this.companyContact = contactInfo;
     }
 
-    public Status getStatus() {
-        return status;
+    // Existing getters and setters
+    public String getCompanyName() {
+        return companyName;
     }
 
-    public void setStatus(Status status) {
-        this.status = status;
+    public void setCompanyName(String companyName) {
+        this.companyName = companyName;
     }
 
-    public Timestamp getCreatedAt() {
-        return createdAt;
+    public String getCompanyLocation() {
+        return companyLocation;
     }
 
-    public void setCreatedAt(Timestamp createdAt) {
-        this.createdAt = createdAt;
+    public void setCompanyLocation(String companyLocation) {
+        this.companyLocation = companyLocation;
+    }
+
+    public String getCompanyContact() {
+        return companyContact;
+    }
+
+    public void setCompanyContact(String companyContact) {
+        this.companyContact = companyContact;
+    }
+
+    public Status getCompanyStatus() {
+        return companyStatus;
+    }
+
+    public void setCompanyStatus(Status companyStatus) {
+        this.companyStatus = companyStatus;
+    }
+
+    public Timestamp getUpdatedAt() {
+        return updatedAt;
+    }
+
+    public void setUpdatedAt(Timestamp updatedAt) {
+        this.updatedAt = updatedAt;
     }
 
     // Utility Methods
     public boolean isActive() {
-        return this.status == Status.ACTIVE;
+        return this.companyStatus == Status.ACTIVE;
+    }
+
+    // Get company display name for UI
+    public String getDisplayName() {
+        return this.companyName + " (" + this.companyLocation + ")";
     }
 
     @Override
     public String toString() {
         return "Company{" +
                 "companyId=" + companyId +
-                ", name='" + name + '\'' +
-                ", location='" + location + '\'' +
-                ", contactInfo='" + contactInfo + '\'' +
-                ", status=" + status +
-                ", createdAt=" + createdAt +
+                ", companyName='" + companyName + '\'' +
+                ", companyLocation='" + companyLocation + '\'' +
+                ", companyContact='" + companyContact + '\'' +
+                ", companyStatus=" + companyStatus +
+                ", updatedAt=" + updatedAt +
                 '}';
     }
 }
-

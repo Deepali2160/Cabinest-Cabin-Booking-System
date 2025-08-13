@@ -1,254 +1,452 @@
 <%@ page contentType="text/html;charset=UTF-8" language="java" %>
 <%@ taglib uri="http://java.sun.com/jsp/jstl/core" prefix="c" %>
+<%@ taglib uri="http://java.sun.com/jsp/jstl/fmt" prefix="fmt" %>
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Edit Cabin - Admin Panel</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-    <link href="${pageContext.request.contextPath}/css/style.css" rel="stylesheet">
+    <title>Edit Cabin - Yash Technology Admin</title>
+    <link href="${pageContext.request.contextPath}/css/common.css" rel="stylesheet">
+    <link href="${pageContext.request.contextPath}/css/admin-edit-cabin.css" rel="stylesheet">
 </head>
 <body>
     <!-- Admin Navigation -->
-    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
-        <div class="container">
-            <a class="navbar-brand" href="${pageContext.request.contextPath}/admin/dashboard">
-                <i class="fas fa-cogs"></i> Admin Panel
-            </a>
-            <div class="navbar-nav ms-auto">
-                <span class="navbar-text text-light me-3">
-                    <i class="fas fa-user-shield"></i> ${admin.name}
-                </span>
-                <a class="nav-link" href="${pageContext.request.contextPath}/admin/manage-cabins">
-                    <i class="fas fa-arrow-left"></i> Back to Cabins
+    <nav class="admin-nav">
+        <div class="nav-container">
+            <div class="nav-brand">
+                <h2>🔧 Yash Technology Admin</h2>
+                <span>Edit Cabin</span>
+            </div>
+
+            <div class="nav-menu">
+                <a href="${pageContext.request.contextPath}/admin/dashboard" class="nav-link">
+                    📊 Dashboard
                 </a>
+                <a href="${pageContext.request.contextPath}/admin/bookings" class="nav-link">
+                    📅 Manage Bookings
+                </a>
+                <a href="${pageContext.request.contextPath}/admin/manage-cabins" class="nav-link">
+                    🏠 Manage Cabins
+                </a>
+                <a href="${pageContext.request.contextPath}/admin/users" class="nav-link">
+                    👥 User Management
+                </a>
+            </div>
+
+            <div class="nav-user">
+                <div class="admin-info">
+                    <span class="admin-name">${admin.name}</span>
+                    <c:choose>
+                        <c:when test="${admin.userType == 'SUPER_ADMIN'}">
+                            <span class="role-badge super-admin">👑 Super Admin</span>
+                        </c:when>
+                        <c:otherwise>
+                            <span class="role-badge admin">👨‍💼 Admin</span>
+                        </c:otherwise>
+                    </c:choose>
+                </div>
+                <div class="user-dropdown">
+                    <button class="dropdown-btn" id="userDropdown">⚙️</button>
+                    <div class="dropdown-menu" id="userDropdownMenu">
+                        <a href="${pageContext.request.contextPath}/dashboard">👤 User Dashboard</a>
+                        <a href="${pageContext.request.contextPath}/logout">🚪 Logout</a>
+                    </div>
+                </div>
             </div>
         </div>
     </nav>
 
-    <div class="container mt-4">
+    <!-- Main Content -->
+    <main class="admin-main">
+
         <!-- Page Header -->
-        <div class="row mb-4">
-            <div class="col-12">
-                <div class="d-flex justify-content-between align-items-center">
-                    <h2><i class="fas fa-edit text-warning"></i> Edit Cabin: ${cabin.name}</h2>
-                    <div>
-                        <a href="${pageContext.request.contextPath}/admin/manage-cabins" class="btn btn-outline-secondary">
-                            <i class="fas fa-list"></i> Manage Cabins
-                        </a>
-                    </div>
+        <section class="page-header">
+            <div class="header-content">
+                <div class="header-info">
+                    <h1>✏️ Edit Cabin</h1>
+                    <p>Modify "${cabin.name}" at Yash Technology - Indore</p>
+                </div>
+
+                <div class="header-actions">
+                    <a href="${pageContext.request.contextPath}/admin/manage-cabins" class="action-btn secondary">
+                        🏠 Manage Cabins
+                    </a>
                 </div>
             </div>
+        </section>
+
+        <!-- Messages -->
+        <div id="message-container">
+            <c:if test="${not empty sessionScope.successMessage}">
+                <div class="message success-message">
+                    ✅ ${sessionScope.successMessage}
+                </div>
+                <c:remove var="successMessage" scope="session"/>
+            </c:if>
+
+            <c:if test="${not empty sessionScope.errorMessage}">
+                <div class="message error-message">
+                    ❌ ${sessionScope.errorMessage}
+                </div>
+                <c:remove var="errorMessage" scope="session"/>
+            </c:if>
         </div>
 
-        <!-- Success/Error Messages -->
-        <c:if test="${not empty sessionScope.successMessage}">
-            <div class="alert alert-success alert-dismissible fade show" role="alert">
-                <i class="fas fa-check-circle"></i> ${sessionScope.successMessage}
-                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-            </div>
-            <c:remove var="successMessage" scope="session"/>
-        </c:if>
-
-        <c:if test="${not empty sessionScope.errorMessage}">
-            <div class="alert alert-danger alert-dismissible fade show" role="alert">
-                <i class="fas fa-exclamation-circle"></i> ${sessionScope.errorMessage}
-                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-            </div>
-            <c:remove var="errorMessage" scope="session"/>
-        </c:if>
-
-        <!-- Edit Cabin Form -->
-        <div class="row justify-content-center">
-            <div class="col-lg-8">
-                <div class="card shadow">
-                    <div class="card-header bg-warning text-dark">
-                        <h5 class="mb-0"><i class="fas fa-edit"></i> Edit Cabin Information</h5>
+        <!-- Edit Cabin Form Section -->
+        <section class="form-section">
+            <div class="form-container">
+                <div class="form-card">
+                    <div class="form-header">
+                        <h2>✏️ Edit Cabin Information</h2>
+                        <p>Update the details for "${cabin.name}"</p>
                     </div>
-                    <div class="card-body">
-                        <form method="post" action="${pageContext.request.contextPath}/admin/cabin/edit" id="editCabinForm">
 
-                            <!-- Hidden Cabin ID -->
-                            <input type="hidden" name="cabinId" value="${cabin.cabinId}">
+                    <form method="post" action="${pageContext.request.contextPath}/admin/edit-cabin"
+                          id="editCabinForm" class="cabin-form">
 
-                            <!-- Basic Information -->
-                            <div class="row mb-3">
-                                <div class="col-md-6">
-                                    <label for="name" class="form-label">
-                                        <i class="fas fa-tag"></i> Cabin Name <span class="text-danger">*</span>
-                                    </label>
-                                    <input type="text" class="form-control" id="name" name="name"
-                                           value="${cabin.name}" required maxlength="100">
-                                </div>
-                                <div class="col-md-6">
-                                    <label for="capacity" class="form-label">
-                                        <i class="fas fa-users"></i> Capacity <span class="text-danger">*</span>
-                                    </label>
-                                    <input type="number" class="form-control" id="capacity" name="capacity"
-                                           value="${cabin.capacity}" required min="1" max="50">
-                                </div>
-                            </div>
+                        <!-- Hidden Fields -->
+                        <input type="hidden" name="cabinId" value="${cabin.cabinId}">
+                        <input type="hidden" name="companyId" value="1">
 
-                            <!-- Company and Location -->
-                            <div class="row mb-3">
-                                <div class="col-md-6">
-                                    <label for="companyId" class="form-label">
-                                        <i class="fas fa-building"></i> Company <span class="text-danger">*</span>
-                                    </label>
-                                    <select class="form-select" id="companyId" name="companyId" required>
-                                        <option value="">Select Company</option>
-                                        <c:forEach var="company" items="${companies}">
-                                            <option value="${company.companyId}"
-                                                    ${company.companyId eq cabin.companyId ? 'selected' : ''}>
-                                                ${company.name} - ${company.location}
-                                            </option>
-                                        </c:forEach>
-                                    </select>
-                                </div>
-                                <div class="col-md-6">
-                                    <label for="location" class="form-label">
-                                        <i class="fas fa-map-marker-alt"></i> Location <span class="text-danger">*</span>
-                                    </label>
-                                    <input type="text" class="form-control" id="location" name="location"
-                                           value="${cabin.location}" required maxlength="200">
-                                </div>
-                            </div>
-
-                            <!-- Amenities -->
-                            <div class="mb-3">
-                                <label for="amenities" class="form-label">
-                                    <i class="fas fa-star"></i> Amenities
+                        <!-- Basic Information Row -->
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="name" class="form-label">
+                                    🏷️ Cabin Name <span class="required">*</span>
                                 </label>
-                                <textarea class="form-control" id="amenities" name="amenities" rows="3">${cabin.amenities}</textarea>
-                                <div class="form-text">List the available amenities and equipment</div>
+                                <input type="text"
+                                       class="form-input"
+                                       id="name"
+                                       name="name"
+                                       value="${cabin.name}"
+                                       placeholder="e.g., Conference Room A, Meeting Hall 1"
+                                       required
+                                       maxlength="100"
+                                       autocomplete="off">
+                                <div class="form-feedback" id="nameError"></div>
                             </div>
 
-                            <!-- Status and VIP Access -->
-                            <div class="row mb-4">
-                                <div class="col-md-6">
-                                    <label for="status" class="form-label">
-                                        <i class="fas fa-flag"></i> Status <span class="text-danger">*</span>
+                            <div class="form-group">
+                                <label for="capacity" class="form-label">
+                                    👥 Capacity <span class="required">*</span>
+                                </label>
+                                <input type="number"
+                                       class="form-input"
+                                       id="capacity"
+                                       name="capacity"
+                                       value="${cabin.capacity}"
+                                       placeholder="Maximum number of people"
+                                       required
+                                       min="1"
+                                       max="50"
+                                       autocomplete="off">
+                                <div class="form-feedback" id="capacityError"></div>
+                            </div>
+                        </div>
+
+                        <!-- Location and Status -->
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="location" class="form-label">
+                                    📍 Location <span class="required">*</span>
+                                </label>
+                                <input type="text"
+                                       class="form-input"
+                                       id="location"
+                                       name="location"
+                                       value="${cabin.location}"
+                                       placeholder="e.g., 2nd Floor Wing A, Ground Floor Reception"
+                                       required
+                                       maxlength="200"
+                                       autocomplete="off">
+                                <div class="form-feedback" id="locationError"></div>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="status" class="form-label">
+                                    📊 Status <span class="required">*</span>
+                                </label>
+                                <select class="form-select" id="status" name="status" required>
+                                    <option value="ACTIVE" ${cabin.status.name() eq 'ACTIVE' ? 'selected' : ''}>
+                                        ✅ Active
+                                    </option>
+                                    <option value="MAINTENANCE" ${cabin.status.name() eq 'MAINTENANCE' ? 'selected' : ''}>
+                                        🔧 Maintenance
+                                    </option>
+                                    <option value="INACTIVE" ${cabin.status.name() eq 'INACTIVE' ? 'selected' : ''}>
+                                        ❌ Inactive
+                                    </option>
+                                </select>
+                                <div class="form-feedback" id="statusError"></div>
+                            </div>
+                        </div>
+
+                        <!-- Amenities Section -->
+                        <div class="form-group full-width">
+                            <label for="amenities" class="form-label">
+                                🌟 Amenities & Equipment
+                            </label>
+                            <div class="amenities-selector">
+                                <div class="amenities-grid">
+                                    <label class="amenity-item">
+                                        <input type="checkbox" name="amenityCheck" value="Projector"
+                                               ${cabin.amenities.contains('Projector') ? 'checked' : ''}>
+                                        <span class="amenity-label">📽️ Projector</span>
                                     </label>
-                                    <select class="form-select" id="status" name="status" required>
-                                        <option value="ACTIVE" ${cabin.status.name() eq 'ACTIVE' ? 'selected' : ''}>Active</option>
-                                        <option value="MAINTENANCE" ${cabin.status.name() eq 'MAINTENANCE' ? 'selected' : ''}>Maintenance</option>
-                                        <option value="INACTIVE" ${cabin.status.name() eq 'INACTIVE' ? 'selected' : ''}>Inactive</option>
-                                    </select>
-                                </div>
-                                <div class="col-md-6 d-flex align-items-end">
-                                    <div class="form-check">
-                                        <input class="form-check-input" type="checkbox" id="isVipOnly" name="isVipOnly"
-                                               value="true" ${cabin.vipOnly ? 'checked' : ''}>
-                                        <label class="form-check-label" for="isVipOnly">
-                                            <i class="fas fa-crown text-warning"></i> <strong>VIP Only Cabin</strong>
-                                        </label>
-                                    </div>
+                                    <label class="amenity-item">
+                                        <input type="checkbox" name="amenityCheck" value="Whiteboard"
+                                               ${cabin.amenities.contains('Whiteboard') ? 'checked' : ''}>
+                                        <span class="amenity-label">📝 Whiteboard</span>
+                                    </label>
+                                    <label class="amenity-item">
+                                        <input type="checkbox" name="amenityCheck" value="Air Conditioning"
+                                               ${cabin.amenities.contains('Air Conditioning') || cabin.amenities.contains('AC') ? 'checked' : ''}>
+                                        <span class="amenity-label">❄️ AC</span>
+                                    </label>
+                                    <label class="amenity-item">
+                                        <input type="checkbox" name="amenityCheck" value="Wi-Fi"
+                                               ${cabin.amenities.contains('Wi-Fi') || cabin.amenities.contains('WiFi') ? 'checked' : ''}>
+                                        <span class="amenity-label">📶 Wi-Fi</span>
+                                    </label>
+                                    <label class="amenity-item">
+                                        <input type="checkbox" name="amenityCheck" value="Video Conferencing"
+                                               ${cabin.amenities.contains('Video Conferencing') || cabin.amenities.contains('Video Call') ? 'checked' : ''}>
+                                        <span class="amenity-label">🎥 Video Call</span>
+                                    </label>
+                                    <label class="amenity-item">
+                                        <input type="checkbox" name="amenityCheck" value="Sound System"
+                                               ${cabin.amenities.contains('Sound System') ? 'checked' : ''}>
+                                        <span class="amenity-label">🔊 Sound System</span>
+                                    </label>
+                                    <label class="amenity-item">
+                                        <input type="checkbox" name="amenityCheck" value="Coffee Machine"
+                                               ${cabin.amenities.contains('Coffee Machine') || cabin.amenities.contains('Coffee') ? 'checked' : ''}>
+                                        <span class="amenity-label">☕ Coffee</span>
+                                    </label>
+                                    <label class="amenity-item">
+                                        <input type="checkbox" name="amenityCheck" value="Flip Chart"
+                                               ${cabin.amenities.contains('Flip Chart') ? 'checked' : ''}>
+                                        <span class="amenity-label">📊 Flip Chart</span>
+                                    </label>
                                 </div>
                             </div>
 
-                            <!-- Form Buttons -->
-                            <div class="d-grid gap-2 d-md-flex justify-content-md-end">
-                                <a href="${pageContext.request.contextPath}/admin/manage-cabins" class="btn btn-secondary me-md-2">
-                                    <i class="fas fa-times"></i> Cancel
-                                </a>
-                                <button type="submit" class="btn btn-warning" id="submitBtn">
-                                    <i class="fas fa-save"></i> Update Cabin
-                                </button>
+                            <textarea class="form-textarea"
+                                      id="amenities"
+                                      name="amenities"
+                                      rows="3"
+                                      placeholder="Additional amenities or custom equipment..."
+                                      maxlength="500">${cabin.amenities}</textarea>
+                            <div class="form-hint">
+                                Select common amenities above or describe custom equipment below
                             </div>
-                        </form>
-                    </div>
+                        </div>
+
+                        <!-- Access Level Section -->
+                        <div class="form-group full-width access-section">
+                            <label class="form-label">
+                                🔑 Access Level
+                            </label>
+
+                            <div class="access-options">
+                                <label class="access-option">
+                                    <input type="radio" name="accessLevel" value="ALL" ${!cabin.vipOnly ? 'checked' : ''}>
+                                    <div class="option-card all-users">
+                                        <div class="option-icon">👥</div>
+                                        <div class="option-content">
+                                            <h4>All Users</h4>
+                                            <p>Available to all employees at Yash Technology</p>
+                                        </div>
+                                    </div>
+                                </label>
+
+                                <label class="access-option">
+                                    <input type="radio" name="accessLevel" value="VIP" ${cabin.vipOnly ? 'checked' : ''}>
+                                    <div class="option-card vip-only">
+                                        <div class="option-icon">⭐</div>
+                                        <div class="option-content">
+                                            <h4>VIP Only</h4>
+                                            <p>Exclusive access for VIP users and administrators</p>
+                                        </div>
+                                    </div>
+                                </label>
+                            </div>
+
+                            <!-- Hidden input for backend compatibility -->
+                            <input type="hidden" id="isVipOnly" name="isVipOnly" value="${cabin.vipOnly}">
+                        </div>
+
+                        <!-- Form Actions -->
+                        <div class="form-actions">
+                            <a href="${pageContext.request.contextPath}/admin/manage-cabins"
+                               class="form-btn secondary">
+                                ↩️ Cancel
+                            </a>
+                            <button type="submit" class="form-btn primary" id="submitBtn">
+                                💾 Update Cabin
+                            </button>
+                        </div>
+                    </form>
                 </div>
 
-                <!-- Cabin Information -->
-                <div class="card mt-4 border-info">
-                    <div class="card-header bg-info text-white">
-                        <h6 class="mb-0"><i class="fas fa-info-circle"></i> Cabin Information</h6>
+                <!-- Cabin Info Sidebar -->
+                <div class="info-card">
+                    <div class="info-header">
+                        <h3>📋 Cabin Information</h3>
                     </div>
-                    <div class="card-body">
-                        <div class="row">
-                            <div class="col-md-6">
-                                <p><strong>Cabin ID:</strong> ${cabin.cabinId}</p>
-                                <p><strong>Current Status:</strong>
-                                    <c:choose>
-                                        <c:when test="${cabin.status.name() eq 'ACTIVE'}">
-                                            <span class="badge bg-success">Active</span>
-                                        </c:when>
-                                        <c:when test="${cabin.status.name() eq 'MAINTENANCE'}">
-                                            <span class="badge bg-warning">Maintenance</span>
-                                        </c:when>
-                                        <c:otherwise>
-                                            <span class="badge bg-secondary">Inactive</span>
-                                        </c:otherwise>
-                                    </c:choose>
-                                </p>
+
+                    <div class="info-content">
+                        <div class="info-item">
+                            <div class="info-label">🆔 Cabin ID</div>
+                            <div class="info-value">${cabin.cabinId}</div>
+                        </div>
+
+                        <div class="info-item">
+                            <div class="info-label">🏢 Company</div>
+                            <div class="info-value">Yash Technology</div>
+                        </div>
+
+                        <div class="info-item">
+                            <div class="info-label">📊 Current Status</div>
+                            <div class="info-value">
+                                <c:choose>
+                                    <c:when test="${cabin.status.name() eq 'ACTIVE'}">
+                                        <span class="status-badge active">✅ Active</span>
+                                    </c:when>
+                                    <c:when test="${cabin.status.name() eq 'MAINTENANCE'}">
+                                        <span class="status-badge maintenance">🔧 Maintenance</span>
+                                    </c:when>
+                                    <c:otherwise>
+                                        <span class="status-badge inactive">❌ Inactive</span>
+                                    </c:otherwise>
+                                </c:choose>
                             </div>
-                            <div class="col-md-6">
-                                <p><strong>Access Level:</strong>
-                                    <c:choose>
-                                        <c:when test="${cabin.vipOnly}">
-                                            <span class="badge bg-warning"><i class="fas fa-crown"></i> VIP Only</span>
-                                        </c:when>
-                                        <c:otherwise>
-                                            <span class="badge bg-secondary">All Users</span>
-                                        </c:otherwise>
-                                    </c:choose>
-                                </p>
-                                <p><strong>Created:</strong>
-                                    <c:choose>
-                                        <c:when test="${not empty cabin.createdAt}">
-                                            <fmt:formatDate value="${cabin.createdAt}" pattern="MMM dd, yyyy 'at' hh:mm a"/>
-                                        </c:when>
-                                        <c:otherwise>
-                                            N/A
-                                        </c:otherwise>
-                                    </c:choose>
-                                </p>
+                        </div>
+
+                        <div class="info-item">
+                            <div class="info-label">🔑 Access Level</div>
+                            <div class="info-value">
+                                <c:choose>
+                                    <c:when test="${cabin.vipOnly}">
+                                        <span class="access-badge vip">⭐ VIP Only</span>
+                                    </c:when>
+                                    <c:otherwise>
+                                        <span class="access-badge all">👥 All Users</span>
+                                    </c:otherwise>
+                                </c:choose>
+                            </div>
+                        </div>
+
+                        <div class="info-item">
+                            <div class="info-label">📅 Created</div>
+                            <div class="info-value">
+                                <c:choose>
+                                    <c:when test="${not empty cabin.createdAt}">
+                                        <fmt:formatDate value="${cabin.createdAt}" pattern="MMM dd, yyyy"/>
+                                        <br><small class="text-muted">
+                                            <fmt:formatDate value="${cabin.createdAt}" pattern="hh:mm a"/>
+                                        </small>
+                                    </c:when>
+                                    <c:otherwise>
+                                        📅 N/A
+                                    </c:otherwise>
+                                </c:choose>
+                            </div>
+                        </div>
+
+                        <div class="info-item">
+                            <div class="info-label">📏 Capacity</div>
+                            <div class="info-value">
+                                <span class="capacity-badge">${cabin.capacity} people</span>
                             </div>
                         </div>
                     </div>
+
+                    <div class="info-actions">
+                        <button type="button" class="info-btn danger" id="deleteCabinBtn">
+                            🗑️ Delete Cabin
+                        </button>
+                        <button type="button" class="info-btn secondary" id="viewBookingsBtn">
+                            📅 View Bookings
+                        </button>
+                    </div>
                 </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Delete Confirmation Modal -->
+    <div class="modal-overlay" id="deleteModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>🗑️ Delete Cabin</h3>
+                <button class="modal-close" id="deleteModalClose">×</button>
+            </div>
+
+            <div class="modal-body">
+                <div class="delete-warning">
+                    ⚠️ <strong>Danger Zone:</strong> This action cannot be undone!
+                </div>
+
+                <div class="delete-info">
+                    <p>Are you sure you want to permanently delete <strong>"${cabin.name}"</strong>?</p>
+                    <ul class="delete-consequences">
+                        <li>❌ Cabin will be removed from the system</li>
+                        <li>📅 All future bookings will be cancelled</li>
+                        <li>📊 Historical data will be preserved but cabin will be inaccessible</li>
+                        <li>👥 Users will be notified of booking cancellations</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="modal-footer">
+                <button class="modal-btn secondary" id="cancelDelete">
+                    ↩️ Cancel
+                </button>
+                <button class="modal-btn danger" id="confirmDelete">
+                    🗑️ Delete Cabin
+                </button>
             </div>
         </div>
     </div>
 
-    <!-- Footer -->
-    <footer class="bg-dark text-light text-center py-3 mt-5">
-        <div class="container">
-            <p class="mb-0">&copy; 2024 Cabin Booking System - Admin Panel</p>
+    <!-- Status Change Warning Modal -->
+    <div class="modal-overlay" id="statusWarningModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>⚠️ Status Change Warning</h3>
+                <button class="modal-close" id="statusWarningClose">×</button>
+            </div>
+
+            <div class="modal-body">
+                <div class="warning-content" id="warningContent">
+                    <!-- Dynamic content based on status change -->
+                </div>
+            </div>
+
+            <div class="modal-footer">
+                <button class="modal-btn secondary" id="cancelStatusChange">
+                    ↩️ Cancel
+                </button>
+                <button class="modal-btn warning" id="confirmStatusChange">
+                    ⚠️ Continue
+                </button>
+            </div>
         </div>
+    </div>
+
+    <!-- Hidden Delete Form -->
+    <form id="deleteForm" method="post" action="${pageContext.request.contextPath}/admin/delete-cabin" style="display: none;">
+        <input type="hidden" name="cabinId" value="${cabin.cabinId}">
+    </form>
+
+    <!-- Footer -->
+    <footer class="admin-footer">
+        <p>&copy; 2024 Yash Technology - Cabin Management System</p>
     </footer>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
-
-    <script>
-        // Form validation and enhancement
-        document.getElementById('editCabinForm').addEventListener('submit', function(e) {
-            const submitBtn = document.getElementById('submitBtn');
-            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Updating Cabin...';
-            submitBtn.disabled = true;
-        });
-
-        // Auto-hide alerts
-        setTimeout(function() {
-            const alerts = document.querySelectorAll('.alert-dismissible');
-            alerts.forEach(alert => {
-                const closeButton = alert.querySelector('.btn-close');
-                if (closeButton) {
-                    closeButton.click();
-                }
-            });
-        }, 5000);
-
-        // Status change warning
-        document.getElementById('status').addEventListener('change', function() {
-            if (this.value === 'INACTIVE') {
-                if (!confirm('Setting cabin to INACTIVE will prevent all future bookings. Continue?')) {
-                    this.value = '${cabin.status.name()}'; // Reset to original value
-                }
-            }
-        });
-    </script>
+    <script src="${pageContext.request.contextPath}/js/common.js"></script>
+    <script src="${pageContext.request.contextPath}/js/admin-edit-cabin.js"></script>
 </body>
 </html>

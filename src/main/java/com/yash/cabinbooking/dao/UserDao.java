@@ -4,19 +4,12 @@ import com.yash.cabinbooking.model.User;
 import java.util.List;
 
 /**
- * USER DAO INTERFACE
+ * USER DAO INTERFACE - SINGLE COMPANY VERSION
  *
- * EVALUATION EXPLANATION:
- * - Interface segregation principle follow kiya
- * - Contract define kiya for all user operations
- * - Implementation flexibility provide karta hai
- * - Testing ke liye mock objects easily create kar sakte hain
- *
- * INTERVIEW TALKING POINTS:
- * - "DAO pattern with interface segregation implement kiya"
- * - "Contract-based programming approach use kiya"
- * - "Future mein different implementations add kar sakte hain"
- * - "Unit testing ke liye mockable design banaya"
+ * Modified for Yash Technology single company usage
+ * - Removed multi-company complexity
+ * - Simplified for single organization operations
+ * - Enhanced for single company user management
  */
 public interface UserDao {
 
@@ -29,18 +22,30 @@ public interface UserDao {
     User getUserById(int userId);
     User getUserByEmail(String email);
     List<User> getAllUsers();
-    List<User> getUsersByCompany(int companyId);
+
+    // ✅ SIMPLIFIED: Single company users (no company filter needed)
+    List<User> getActiveUsers();
+
     boolean updateUser(User user);
     boolean deleteUser(int userId);
 
     // Business specific operations
     boolean updateUserPassword(int userId, String newPassword);
-    boolean updateUserCompany(int userId, int newCompanyId);
     boolean activateUser(int userId);
     boolean deactivateUser(int userId);
 
-    // AI related operations
+    // ✅ SINGLE COMPANY: Enhanced user type operations
     List<User> getVIPUsers();
     List<User> getActiveUsersByType(User.UserType userType);
+    List<User> getAdminUsers();
+
+    // Analytics operations
     int getUserBookingCount(int userId);
+    int getTotalUserCount();
+    int getActiveUserCount();
+
+    // ✅ NEW: Single company utility methods
+    List<User> getAllUsersForAdmin();
+    boolean updateUserType(int userId, User.UserType newType);
+    boolean isUserActive(int userId);
 }

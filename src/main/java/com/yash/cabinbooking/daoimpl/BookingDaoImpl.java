@@ -8,20 +8,19 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * BOOKING DAO IMPLEMENTATION - FLEXIBLE DURATION SYSTEM
+ * BOOKING DAO IMPLEMENTATION - SINGLE COMPANY VERSION
  *
  * EVALUATION EXPLANATION:
+ * - Modified for Yash Technology single company usage
  * - Enhanced flexible time slot system with duration-based booking
  * - Smart overlap detection using time mathematics
  * - Support for 15-minute interval precision
- * - AI-ready methods for user behavior tracking
- * - VIP priority handling with automatic escalation
- * - Robust conflict resolution and alternative suggestions
+ * - Simplified for single organization operations
+ * - AdminController support with required methods
  *
  * INTERVIEW TALKING POINTS:
- * - "Implemented flexible duration booking system with smart conflict detection"
+ * - "Implemented single-tenant booking system with smart conflict detection"
  * - "Enhanced time slot availability with overlap detection algorithms"
- * - "AI-powered alternative time slot suggestions"
  * - "Professional error handling with detailed logging"
  * - "Support for custom booking durations from 15 minutes to 8+ hours"
  */
@@ -86,303 +85,6 @@ public class BookingDaoImpl implements BookingDao {
 
         return false;
     }
-
-    // ✅ ENHANCED: Flexible time slot availability with smart overlap detection
-    @Override
-    public boolean isSlotAvailable(int cabinId, Date date, String timeSlot) {
-        // ✅ FIX: Handle empty or null time slots (fixes parsing errors)
-        if (timeSlot == null || timeSlot.trim().isEmpty()) {
-            System.err.println("❌ Empty time slot provided for availability check");
-            return false;
-        }
-
-        // ✅ FIX: Validate time slot format
-        if (!isValidTimeSlotFormat(timeSlot)) {
-            System.err.println("❌ Invalid time slot format: " + timeSlot);
-            return false;
-        }
-
-        // ✅ ENHANCED: Smart overlap detection using time mathematics
-        String sql = "SELECT COUNT(*) FROM bookings WHERE cabin_id = ? AND booking_date = ? AND status IN ('PENDING', 'APPROVED') AND " +
-                "((SUBSTRING(time_slot, 1, 5) < SUBSTRING(?, 7, 5)) AND (SUBSTRING(time_slot, 7, 5) > SUBSTRING(?, 1, 5)))";
-
-        Connection conn = null;
-        PreparedStatement pstmt = null;
-        ResultSet rs = null;
-
-        try {
-            conn = DbUtil.getConnection();
-            if (conn == null) {
-                System.err.println("❌ Database connection failed in isSlotAvailable");
-                return false;
-            }
-
-            pstmt = conn.prepareStatement(sql);
-            pstmt.setInt(1, cabinId);
-            pstmt.setDate(2, date);
-            pstmt.setString(3, timeSlot);
-            pstmt.setString(4, timeSlot);
-            rs = pstmt.executeQuery();
-
-            if (rs.next()) {
-                int count = rs.getInt(1);
-                boolean available = (count == 0);
-                System.out.println("🔍 Enhanced availability check - Cabin: " + cabinId + ", Date: " + date + ", Time: " + timeSlot + " -> " + (available ? "✅ AVAILABLE" : "❌ CONFLICT"));
-                return available;
-            }
-
-        } catch (SQLException e) {
-            System.err.println("❌ Error checking slot availability: " + e.getMessage());
-            e.printStackTrace();
-        } finally {
-            DbUtil.closeAllResources(conn, pstmt, rs);
-        }
-
-        return false;
-    }
-
-    // ✅ NEW: Generate flexible time slots for any duration
-    public List<String> getAvailableTimeSlots(int cabinId, Date date, int durationMinutes) {
-        List<String> availableSlots = new ArrayList<>();
-
-        // Business hours configuration
-        int startHour = 9;   // 9 AM
-        int endHour = 18;    // 6 PM
-        int interval = 15;   // 15-minute intervals
-
-        Connection conn = null;
-        PreparedStatement pstmt = null;
-        ResultSet rs = null;
-
-        try {
-            conn = DbUtil.getConnection();
-            if (conn == null) return availableSlots;
-
-            // Get all existing bookings for the date and cabin
-            String sql = "SELECT time_slot FROM bookings WHERE cabin_id = ? AND booking_date = ? AND status IN ('PENDING', 'APPROVED')";
-            pstmt = conn.prepareStatement(sql);
-            pstmt.setInt(1, cabinId);
-            pstmt.setDate(2, date);
-            rs = pstmt.executeQuery();
-
-            List<String> bookedSlots = new ArrayList<>();
-            while (rs.next()) {
-                bookedSlots.add(rs.getString("time_slot"));
-            }
-
-            // Generate all possible time slots
-            for (int hour = startHour; hour < endHour; hour++) {
-                for (int minute = 0; minute < 60; minute += interval) {
-                    String startTime = String.format("%02d:%02d", hour, minute);
-
-                    // Calculate end time based on duration
-                    int totalMinutes = hour * 60 + minute + durationMinutes;
-                    int endHourCalc = totalMinutes / 60;
-                    int endMinute = totalMinutes % 60;
-
-                    // Check if booking fits within business hours
-                    if (endHourCalc <= endHour && (endHourCalc < endHour || endMinute == 0)) {
-                        String endTime = String.format("%02d:%02d", endHourCalc, endMinute);
-                        String timeSlot = startTime + "-" + endTime;
-
-                        // Check if this slot conflicts with existing bookings
-                        if (!hasTimeConflict(timeSlot, bookedSlots)) {
-                            availableSlots.add(timeSlot);
-                        }
-                    }
-                }
-            }
-
-            System.out.println("🕐 Generated " + availableSlots.size() + " available slots for " + durationMinutes + " minutes duration");
-
-        } catch (SQLException e) {
-            System.err.println("❌ Error getting available time slots: " + e.getMessage());
-            e.printStackTrace();
-        } finally {
-            DbUtil.closeAllResources(conn, pstmt, rs);
-        }
-
-        return availableSlots;
-    }
-
-    // ✅ NEW: Get alternative time slots when requested slot is unavailable
-    public List<String> getAlternativeTimeSlots(int cabinId, Date date, String requestedSlot, int maxAlternatives) {
-        List<String> alternatives = new ArrayList<>();
-
-        if (requestedSlot == null || requestedSlot.trim().isEmpty()) {
-            return alternatives;
-        }
-
-        try {
-            // Extract duration from requested slot
-            int duration = calculateSlotDuration(requestedSlot);
-            if (duration <= 0) {
-                duration = 60; // Default to 1 hour
-            }
-
-            // Get all available slots for the same duration
-            List<String> availableSlots = getAvailableTimeSlots(cabinId, date, duration);
-
-            // Return up to maxAlternatives
-            for (int i = 0; i < Math.min(maxAlternatives, availableSlots.size()); i++) {
-                alternatives.add(availableSlots.get(i));
-            }
-
-            System.out.println("🔄 Found " + alternatives.size() + " alternative time slots for " + duration + " minutes");
-
-        } catch (Exception e) {
-            System.err.println("❌ Error getting alternative time slots: " + e.getMessage());
-            e.printStackTrace();
-        }
-
-        return alternatives;
-    }
-
-    // ✅ NEW: Get predefined duration options for frontend
-    public List<Integer> getAvailableDurations() {
-        List<Integer> durations = new ArrayList<>();
-        durations.add(15);   // 15 minutes
-        durations.add(30);   // 30 minutes
-        durations.add(45);   // 45 minutes
-        durations.add(60);   // 1 hour
-        durations.add(90);   // 1.5 hours
-        durations.add(120);  // 2 hours
-        durations.add(180);  // 3 hours
-        durations.add(240);  // 4 hours
-        return durations;
-    }
-
-    // ✅ NEW: Generate time slots for a specific duration (for frontend)
-    public List<String> generateTimeSlotsForDuration(int durationMinutes) {
-        List<String> timeSlots = new ArrayList<>();
-
-        int startHour = 9;
-        int endHour = 18;
-        int interval = 15;
-
-        for (int hour = startHour; hour < endHour; hour++) {
-            for (int minute = 0; minute < 60; minute += interval) {
-                String startTime = String.format("%02d:%02d", hour, minute);
-
-                // Calculate end time
-                int totalMinutes = hour * 60 + minute + durationMinutes;
-                int endHourCalc = totalMinutes / 60;
-                int endMinute = totalMinutes % 60;
-
-                // Check if it fits within business hours
-                if (endHourCalc <= endHour && (endHourCalc < endHour || endMinute == 0)) {
-                    String endTime = String.format("%02d:%02d", endHourCalc, endMinute);
-                    timeSlots.add(startTime + "-" + endTime);
-                }
-            }
-        }
-
-        return timeSlots;
-    }
-
-    // UTILITY METHODS FOR FLEXIBLE TIME SLOT SYSTEM
-
-    private boolean hasTimeConflict(String newSlot, List<String> existingSlots) {
-        try {
-            String[] newTimes = newSlot.split("-");
-            if (newTimes.length != 2) return true;
-
-            String newStart = newTimes[0];
-            String newEnd = newTimes[1];
-
-            for (String existingSlot : existingSlots) {
-                String[] existingTimes = existingSlot.split("-");
-                if (existingTimes.length != 2) continue;
-
-                String existingStart = existingTimes[0];
-                String existingEnd = existingTimes[1];
-
-                if (timeOverlaps(newStart, newEnd, existingStart, existingEnd)) {
-                    return true;
-                }
-            }
-
-            return false;
-
-        } catch (Exception e) {
-            System.err.println("❌ Error checking time conflict: " + e.getMessage());
-            return true;
-        }
-    }
-
-    private boolean timeOverlaps(String start1, String end1, String start2, String end2) {
-        try {
-            int start1Minutes = timeToMinutes(start1);
-            int end1Minutes = timeToMinutes(end1);
-            int start2Minutes = timeToMinutes(start2);
-            int end2Minutes = timeToMinutes(end2);
-
-            return (start1Minutes < end2Minutes && end1Minutes > start2Minutes);
-
-        } catch (Exception e) {
-            return true;
-        }
-    }
-
-    private int timeToMinutes(String time) {
-        try {
-            String[] parts = time.split(":");
-            int hours = Integer.parseInt(parts[0]);
-            int minutes = Integer.parseInt(parts[1]);
-            return hours * 60 + minutes;
-        } catch (Exception e) {
-            return 0;
-        }
-    }
-
-    private int calculateSlotDuration(String timeSlot) {
-        try {
-            String[] times = timeSlot.split("-");
-            if (times.length != 2) return 60;
-
-            int startMinutes = timeToMinutes(times[0]);
-            int endMinutes = timeToMinutes(times[1]);
-            return endMinutes - startMinutes;
-        } catch (Exception e) {
-            return 60;
-        }
-    }
-
-    private boolean isValidTimeSlotFormat(String timeSlot) {
-        if (timeSlot == null || timeSlot.trim().isEmpty()) {
-            return false;
-        }
-
-        // Expected format: "HH:MM-HH:MM" (e.g., "09:00-10:00")
-        String pattern = "^([0-1]?[0-9]|2[0-3]):[0-5][0-9]-([0-1]?[0-9]|2[0-3]):[0-5][0-9]$";
-
-        if (!timeSlot.matches(pattern)) {
-            return false;
-        }
-
-        try {
-            String[] times = timeSlot.split("-");
-            int startMinutes = timeToMinutes(times[0]);
-            int endMinutes = timeToMinutes(times[1]);
-
-            // End time must be after start time
-            if (endMinutes <= startMinutes) {
-                return false;
-            }
-
-            // Maximum booking duration: 8 hours (480 minutes)
-            if ((endMinutes - startMinutes) > 480) {
-                return false;
-            }
-
-            return true;
-
-        } catch (Exception e) {
-            return false;
-        }
-    }
-
-    // ALL YOUR EXISTING METHODS REMAIN THE SAME WITH ENHANCED ERROR HANDLING
 
     @Override
     public Booking getBookingById(int bookingId) {
@@ -455,6 +157,47 @@ public class BookingDaoImpl implements BookingDao {
 
         } catch (SQLException e) {
             System.err.println("❌ Error getting all bookings: " + e.getMessage());
+            e.printStackTrace();
+        } finally {
+            DbUtil.closeAllResources(conn, pstmt, rs);
+        }
+
+        return bookings;
+    }
+
+    // ✅ NEW: Get recent bookings for AdminController
+    @Override
+    public List<Booking> getRecentBookings(int limit) {
+        String sql = "SELECT b.booking_id, b.user_id, b.cabin_id, b.booking_date, b.time_slot, b.purpose, " +
+                "b.booking_type, b.status, b.priority_level, b.created_at, b.approved_by, b.approved_at, " +
+                "u.name as user_name, c.name as cabin_name " +
+                "FROM bookings b " +
+                "LEFT JOIN users u ON b.user_id = u.user_id " +
+                "LEFT JOIN cabins c ON b.cabin_id = c.cabin_id " +
+                "ORDER BY b.created_at DESC " +
+                "LIMIT ?";
+
+        List<Booking> bookings = new ArrayList<>();
+        Connection conn = null;
+        PreparedStatement pstmt = null;
+        ResultSet rs = null;
+
+        try {
+            conn = DbUtil.getConnection();
+            if (conn == null) return bookings;
+
+            pstmt = conn.prepareStatement(sql);
+            pstmt.setInt(1, limit);
+            rs = pstmt.executeQuery();
+
+            while (rs.next()) {
+                bookings.add(mapResultSetToBooking(rs));
+            }
+
+            System.out.println("✅ Retrieved " + bookings.size() + " recent bookings");
+
+        } catch (SQLException e) {
+            System.err.println("❌ Error getting recent bookings: " + e.getMessage());
             e.printStackTrace();
         } finally {
             DbUtil.closeAllResources(conn, pstmt, rs);
@@ -842,6 +585,60 @@ public class BookingDaoImpl implements BookingDao {
         return false;
     }
 
+    // ✅ ENHANCED: Flexible time slot availability with smart overlap detection
+    @Override
+    public boolean isSlotAvailable(int cabinId, Date date, String timeSlot) {
+        // ✅ FIX: Handle empty or null time slots (fixes parsing errors)
+        if (timeSlot == null || timeSlot.trim().isEmpty()) {
+            System.err.println("❌ Empty time slot provided for availability check");
+            return false;
+        }
+
+        // ✅ FIX: Validate time slot format
+        if (!isValidTimeSlotFormat(timeSlot)) {
+            System.err.println("❌ Invalid time slot format: " + timeSlot);
+            return false;
+        }
+
+        // ✅ ENHANCED: Smart overlap detection using time mathematics
+        String sql = "SELECT COUNT(*) FROM bookings WHERE cabin_id = ? AND booking_date = ? AND status IN ('PENDING', 'APPROVED') AND " +
+                "((SUBSTRING(time_slot, 1, 5) < SUBSTRING(?, 7, 5)) AND (SUBSTRING(time_slot, 7, 5) > SUBSTRING(?, 1, 5)))";
+
+        Connection conn = null;
+        PreparedStatement pstmt = null;
+        ResultSet rs = null;
+
+        try {
+            conn = DbUtil.getConnection();
+            if (conn == null) {
+                System.err.println("❌ Database connection failed in isSlotAvailable");
+                return false;
+            }
+
+            pstmt = conn.prepareStatement(sql);
+            pstmt.setInt(1, cabinId);
+            pstmt.setDate(2, date);
+            pstmt.setString(3, timeSlot);
+            pstmt.setString(4, timeSlot);
+            rs = pstmt.executeQuery();
+
+            if (rs.next()) {
+                int count = rs.getInt(1);
+                boolean available = (count == 0);
+                System.out.println("🔍 Enhanced availability check - Cabin: " + cabinId + ", Date: " + date + ", Time: " + timeSlot + " -> " + (available ? "✅ AVAILABLE" : "❌ CONFLICT"));
+                return available;
+            }
+
+        } catch (SQLException e) {
+            System.err.println("❌ Error checking slot availability: " + e.getMessage());
+            e.printStackTrace();
+        } finally {
+            DbUtil.closeAllResources(conn, pstmt, rs);
+        }
+
+        return false;
+    }
+
     @Override
     public List<Booking> getConflictingBookings(int cabinId, Date date, String timeSlot) {
         String sql = "SELECT b.booking_id, b.user_id, b.cabin_id, b.booking_date, b.time_slot, b.purpose, " +
@@ -883,6 +680,149 @@ public class BookingDaoImpl implements BookingDao {
         }
 
         return conflicts;
+    }
+
+    // ✅ NEW: Generate flexible time slots for any duration
+    @Override
+    public List<String> getAvailableTimeSlots(int cabinId, Date date, int durationMinutes) {
+        List<String> availableSlots = new ArrayList<>();
+
+        // Business hours configuration
+        int startHour = 9;   // 9 AM
+        int endHour = 18;    // 6 PM
+        int interval = 15;   // 15-minute intervals
+
+        Connection conn = null;
+        PreparedStatement pstmt = null;
+        ResultSet rs = null;
+
+        try {
+            conn = DbUtil.getConnection();
+            if (conn == null) return availableSlots;
+
+            // Get all existing bookings for the date and cabin
+            String sql = "SELECT time_slot FROM bookings WHERE cabin_id = ? AND booking_date = ? AND status IN ('PENDING', 'APPROVED')";
+            pstmt = conn.prepareStatement(sql);
+            pstmt.setInt(1, cabinId);
+            pstmt.setDate(2, date);
+            rs = pstmt.executeQuery();
+
+            List<String> bookedSlots = new ArrayList<>();
+            while (rs.next()) {
+                bookedSlots.add(rs.getString("time_slot"));
+            }
+
+            // Generate all possible time slots
+            for (int hour = startHour; hour < endHour; hour++) {
+                for (int minute = 0; minute < 60; minute += interval) {
+                    String startTime = String.format("%02d:%02d", hour, minute);
+
+                    // Calculate end time based on duration
+                    int totalMinutes = hour * 60 + minute + durationMinutes;
+                    int endHourCalc = totalMinutes / 60;
+                    int endMinute = totalMinutes % 60;
+
+                    // Check if booking fits within business hours
+                    if (endHourCalc <= endHour && (endHourCalc < endHour || endMinute == 0)) {
+                        String endTime = String.format("%02d:%02d", endHourCalc, endMinute);
+                        String timeSlot = startTime + "-" + endTime;
+
+                        // Check if this slot conflicts with existing bookings
+                        if (!hasTimeConflict(timeSlot, bookedSlots)) {
+                            availableSlots.add(timeSlot);
+                        }
+                    }
+                }
+            }
+
+            System.out.println("🕐 Generated " + availableSlots.size() + " available slots for " + durationMinutes + " minutes duration");
+
+        } catch (SQLException e) {
+            System.err.println("❌ Error getting available time slots: " + e.getMessage());
+            e.printStackTrace();
+        } finally {
+            DbUtil.closeAllResources(conn, pstmt, rs);
+        }
+
+        return availableSlots;
+    }
+
+    // ✅ NEW: Get alternative time slots when requested slot is unavailable
+    @Override
+    public List<String> getAlternativeTimeSlots(int cabinId, Date date, String requestedSlot, int maxAlternatives) {
+        List<String> alternatives = new ArrayList<>();
+
+        if (requestedSlot == null || requestedSlot.trim().isEmpty()) {
+            return alternatives;
+        }
+
+        try {
+            // Extract duration from requested slot
+            int duration = calculateSlotDuration(requestedSlot);
+            if (duration <= 0) {
+                duration = 60; // Default to 1 hour
+            }
+
+            // Get all available slots for the same duration
+            List<String> availableSlots = getAvailableTimeSlots(cabinId, date, duration);
+
+            // Return up to maxAlternatives
+            for (int i = 0; i < Math.min(maxAlternatives, availableSlots.size()); i++) {
+                alternatives.add(availableSlots.get(i));
+            }
+
+            System.out.println("🔄 Found " + alternatives.size() + " alternative time slots for " + duration + " minutes");
+
+        } catch (Exception e) {
+            System.err.println("❌ Error getting alternative time slots: " + e.getMessage());
+            e.printStackTrace();
+        }
+
+        return alternatives;
+    }
+
+    // ✅ NEW: Get predefined duration options for frontend
+    @Override
+    public List<Integer> getAvailableDurations() {
+        List<Integer> durations = new ArrayList<>();
+        durations.add(15);   // 15 minutes
+        durations.add(30);   // 30 minutes
+        durations.add(45);   // 45 minutes
+        durations.add(60);   // 1 hour
+        durations.add(90);   // 1.5 hours
+        durations.add(120);  // 2 hours
+        durations.add(180);  // 3 hours
+        durations.add(240);  // 4 hours
+        return durations;
+    }
+
+    // ✅ NEW: Generate time slots for a specific duration (for frontend)
+    @Override
+    public List<String> generateTimeSlotsForDuration(int durationMinutes) {
+        List<String> timeSlots = new ArrayList<>();
+
+        int startHour = 9;
+        int endHour = 18;
+        int interval = 15;
+
+        for (int hour = startHour; hour < endHour; hour++) {
+            for (int minute = 0; minute < 60; minute += interval) {
+                String startTime = String.format("%02d:%02d", hour, minute);
+
+                // Calculate end time
+                int totalMinutes = hour * 60 + minute + durationMinutes;
+                int endHourCalc = totalMinutes / 60;
+                int endMinute = totalMinutes % 60;
+
+                // Check if it fits within business hours
+                if (endHourCalc <= endHour && (endHourCalc < endHour || endMinute == 0)) {
+                    String endTime = String.format("%02d:%02d", endHourCalc, endMinute);
+                    timeSlots.add(startTime + "-" + endTime);
+                }
+            }
+        }
+
+        return timeSlots;
     }
 
     @Override
@@ -1007,6 +947,319 @@ public class BookingDaoImpl implements BookingDao {
         return bookings;
     }
 
+    // ✅ NEW: Additional utility methods for AdminController support
+    @Override
+    public List<Booking> getBookingsByStatus(String status) {
+        String sql = "SELECT b.booking_id, b.user_id, b.cabin_id, b.booking_date, b.time_slot, b.purpose, " +
+                "b.booking_type, b.status, b.priority_level, b.created_at, b.approved_by, b.approved_at, " +
+                "u.name as user_name, c.name as cabin_name " +
+                "FROM bookings b " +
+                "LEFT JOIN users u ON b.user_id = u.user_id " +
+                "LEFT JOIN cabins c ON b.cabin_id = c.cabin_id " +
+                "WHERE b.status = ? " +
+                "ORDER BY b.created_at DESC";
+
+        List<Booking> bookings = new ArrayList<>();
+        Connection conn = null;
+        PreparedStatement pstmt = null;
+        ResultSet rs = null;
+
+        try {
+            conn = DbUtil.getConnection();
+            if (conn == null) return bookings;
+
+            pstmt = conn.prepareStatement(sql);
+            pstmt.setString(1, status);
+            rs = pstmt.executeQuery();
+
+            while (rs.next()) {
+                bookings.add(mapResultSetToBooking(rs));
+            }
+
+            System.out.println("📊 Retrieved " + bookings.size() + " bookings with status: " + status);
+
+        } catch (SQLException e) {
+            System.err.println("❌ Error getting bookings by status: " + e.getMessage());
+            e.printStackTrace();
+        } finally {
+            DbUtil.closeAllResources(conn, pstmt, rs);
+        }
+
+        return bookings;
+    }
+
+    @Override
+    public List<Booking> getVIPBookings() {
+        String sql = "SELECT b.booking_id, b.user_id, b.cabin_id, b.booking_date, b.time_slot, b.purpose, " +
+                "b.booking_type, b.status, b.priority_level, b.created_at, b.approved_by, b.approved_at, " +
+                "u.name as user_name, c.name as cabin_name " +
+                "FROM bookings b " +
+                "LEFT JOIN users u ON b.user_id = u.user_id " +
+                "LEFT JOIN cabins c ON b.cabin_id = c.cabin_id " +
+                "WHERE b.priority_level = 'VIP' " +
+                "ORDER BY b.created_at DESC";
+
+        List<Booking> bookings = new ArrayList<>();
+        Connection conn = null;
+        PreparedStatement pstmt = null;
+        ResultSet rs = null;
+
+        try {
+            conn = DbUtil.getConnection();
+            if (conn == null) return bookings;
+
+            pstmt = conn.prepareStatement(sql);
+            rs = pstmt.executeQuery();
+
+            while (rs.next()) {
+                bookings.add(mapResultSetToBooking(rs));
+            }
+
+            System.out.println("⭐ Retrieved " + bookings.size() + " VIP bookings");
+
+        } catch (SQLException e) {
+            System.err.println("❌ Error getting VIP bookings: " + e.getMessage());
+            e.printStackTrace();
+        } finally {
+            DbUtil.closeAllResources(conn, pstmt, rs);
+        }
+
+        return bookings;
+    }
+
+    @Override
+    public List<Booking> getUrgentBookings() {
+        String sql = "SELECT b.booking_id, b.user_id, b.cabin_id, b.booking_date, b.time_slot, b.purpose, " +
+                "b.booking_type, b.status, b.priority_level, b.created_at, b.approved_by, b.approved_at, " +
+                "u.name as user_name, c.name as cabin_name " +
+                "FROM bookings b " +
+                "LEFT JOIN users u ON b.user_id = u.user_id " +
+                "LEFT JOIN cabins c ON b.cabin_id = c.cabin_id " +
+                "WHERE (b.priority_level IN ('VIP', 'HIGH') AND b.status = 'PENDING') " +
+                "OR (b.booking_type = 'EMERGENCY') " +
+                "ORDER BY b.priority_level DESC, b.created_at ASC";
+
+        List<Booking> bookings = new ArrayList<>();
+        Connection conn = null;
+        PreparedStatement pstmt = null;
+        ResultSet rs = null;
+
+        try {
+            conn = DbUtil.getConnection();
+            if (conn == null) return bookings;
+
+            pstmt = conn.prepareStatement(sql);
+            rs = pstmt.executeQuery();
+
+            while (rs.next()) {
+                bookings.add(mapResultSetToBooking(rs));
+            }
+
+            System.out.println("🚨 Retrieved " + bookings.size() + " urgent bookings requiring attention");
+
+        } catch (SQLException e) {
+            System.err.println("❌ Error getting urgent bookings: " + e.getMessage());
+            e.printStackTrace();
+        } finally {
+            DbUtil.closeAllResources(conn, pstmt, rs);
+        }
+
+        return bookings;
+    }
+
+    @Override
+    public int getBookingCountByUser(int userId) {
+        String sql = "SELECT COUNT(*) FROM bookings WHERE user_id = ?";
+
+        Connection conn = null;
+        PreparedStatement pstmt = null;
+        ResultSet rs = null;
+
+        try {
+            conn = DbUtil.getConnection();
+            if (conn == null) return 0;
+
+            pstmt = conn.prepareStatement(sql);
+            pstmt.setInt(1, userId);
+            rs = pstmt.executeQuery();
+
+            if (rs.next()) {
+                return rs.getInt(1);
+            }
+
+        } catch (SQLException e) {
+            System.err.println("❌ Error getting booking count by user: " + e.getMessage());
+            e.printStackTrace();
+        } finally {
+            DbUtil.closeAllResources(conn, pstmt, rs);
+        }
+
+        return 0;
+    }
+
+    @Override
+    public int getBookingCountByCabin(int cabinId) {
+        String sql = "SELECT COUNT(*) FROM bookings WHERE cabin_id = ?";
+
+        Connection conn = null;
+        PreparedStatement pstmt = null;
+        ResultSet rs = null;
+
+        try {
+            conn = DbUtil.getConnection();
+            if (conn == null) return 0;
+
+            pstmt = conn.prepareStatement(sql);
+            pstmt.setInt(1, cabinId);
+            rs = pstmt.executeQuery();
+
+            if (rs.next()) {
+                return rs.getInt(1);
+            }
+
+        } catch (SQLException e) {
+            System.err.println("❌ Error getting booking count by cabin: " + e.getMessage());
+            e.printStackTrace();
+        } finally {
+            DbUtil.closeAllResources(conn, pstmt, rs);
+        }
+
+        return 0;
+    }
+
+    @Override
+    public int getTotalBookingCount() {
+        String sql = "SELECT COUNT(*) FROM bookings";
+
+        Connection conn = null;
+        PreparedStatement pstmt = null;
+        ResultSet rs = null;
+
+        try {
+            conn = DbUtil.getConnection();
+            if (conn == null) return 0;
+
+            pstmt = conn.prepareStatement(sql);
+            rs = pstmt.executeQuery();
+
+            if (rs.next()) {
+                return rs.getInt(1);
+            }
+
+        } catch (SQLException e) {
+            System.err.println("❌ Error getting total booking count: " + e.getMessage());
+            e.printStackTrace();
+        } finally {
+            DbUtil.closeAllResources(conn, pstmt, rs);
+        }
+
+        return 0;
+    }
+
+    // ================================
+    // PRIVATE UTILITY METHODS
+    // ================================
+
+    private boolean hasTimeConflict(String newSlot, List<String> existingSlots) {
+        try {
+            String[] newTimes = newSlot.split("-");
+            if (newTimes.length != 2) return true;
+
+            String newStart = newTimes[0];
+            String newEnd = newTimes[1];
+
+            for (String existingSlot : existingSlots) {
+                String[] existingTimes = existingSlot.split("-");
+                if (existingTimes.length != 2) continue;
+
+                String existingStart = existingTimes[0];
+                String existingEnd = existingTimes[1];
+
+                if (timeOverlaps(newStart, newEnd, existingStart, existingEnd)) {
+                    return true;
+                }
+            }
+
+            return false;
+
+        } catch (Exception e) {
+            System.err.println("❌ Error checking time conflict: " + e.getMessage());
+            return true;
+        }
+    }
+
+    private boolean timeOverlaps(String start1, String end1, String start2, String end2) {
+        try {
+            int start1Minutes = timeToMinutes(start1);
+            int end1Minutes = timeToMinutes(end1);
+            int start2Minutes = timeToMinutes(start2);
+            int end2Minutes = timeToMinutes(end2);
+
+            return (start1Minutes < end2Minutes && end1Minutes > start2Minutes);
+
+        } catch (Exception e) {
+            return true;
+        }
+    }
+
+    private int timeToMinutes(String time) {
+        try {
+            String[] parts = time.split(":");
+            int hours = Integer.parseInt(parts[0]);
+            int minutes = Integer.parseInt(parts[1]);
+            return hours * 60 + minutes;
+        } catch (Exception e) {
+            return 0;
+        }
+    }
+
+    private int calculateSlotDuration(String timeSlot) {
+        try {
+            String[] times = timeSlot.split("-");
+            if (times.length != 2) return 60;
+
+            int startMinutes = timeToMinutes(times[0]);
+            int endMinutes = timeToMinutes(times[1]);
+            return endMinutes - startMinutes;
+        } catch (Exception e) {
+            return 60;
+        }
+    }
+
+    private boolean isValidTimeSlotFormat(String timeSlot) {
+        if (timeSlot == null || timeSlot.trim().isEmpty()) {
+            return false;
+        }
+
+        // Expected format: "HH:MM-HH:MM" (e.g., "09:00-10:00")
+        String pattern = "^([0-1]?[0-9]|2[0-3]):[0-5][0-9]-([0-1]?[0-9]|2[0-3]):[0-5][0-9]$";
+
+        if (!timeSlot.matches(pattern)) {
+            return false;
+        }
+
+        try {
+            String[] times = timeSlot.split("-");
+            int startMinutes = timeToMinutes(times[0]);
+            int endMinutes = timeToMinutes(times[1]);
+
+            // End time must be after start time
+            if (endMinutes <= startMinutes) {
+                return false;
+            }
+
+            // Maximum booking duration: 8 hours (480 minutes)
+            if ((endMinutes - startMinutes) > 480) {
+                return false;
+            }
+
+            return true;
+
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
     // ✅ ENHANCED: Enhanced mapResultSetToBooking with better error handling
     private Booking mapResultSetToBooking(ResultSet rs) throws SQLException {
         Booking booking = new Booking();
@@ -1030,8 +1283,14 @@ public class BookingDaoImpl implements BookingDao {
             booking.setBookingType(Booking.BookingType.SINGLE_DAY);
         }
 
-        booking.setStatus(Booking.Status.valueOf(rs.getString("status")));
-        booking.setPriorityLevel(Booking.PriorityLevel.valueOf(rs.getString("priority_level")));
+        // Handle status safely with fromString method
+        String statusStr = rs.getString("status");
+        booking.setStatus(Booking.Status.fromString(statusStr));
+
+        // Handle priority level safely with fromString method
+        String priorityStr = rs.getString("priority_level");
+        booking.setPriorityLevel(Booking.PriorityLevel.fromString(priorityStr));
+
         booking.setCreatedAt(rs.getTimestamp("created_at"));
 
         // Handle nullable fields safely

@@ -6,25 +6,25 @@ import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 
 /**
- * BOOKING MODEL CLASS - FLEXIBLE DURATION SYSTEM
+ * BOOKING MODEL CLASS - SINGLE COMPANY VERSION
  *
  * EVALUATION EXPLANATION:
  * - Enhanced for flexible duration booking (15 min to 8+ hours)
+ * - Optimized for Yash Technology single company usage
  * - Smart time slot management with duration calculation
  * - Status workflow for admin approval process
- * - Priority levels for VIP handling with auto-escalation
- * - AI-friendly fields for recommendation engine
- * - Support for 15-minute precision scheduling
+ * - Priority levels for VIP handling
+ * - Aligned with database table structure
  *
  * INTERVIEW TALKING POINTS:
  * - "Implemented flexible duration booking model supporting any time range"
  * - "Added smart time slot validation and overlap detection methods"
- * - "Enhanced enum system for professional booking types and priorities"
- * - "Built AI-ready model with analytics-friendly methods"
+ * - "Enhanced enum system matching database constraints"
+ * - "Built single-company focused model for scalability"
  */
 public class Booking {
 
-    // ✅ ENHANCED: More comprehensive booking types
+    // ✅ DATABASE ALIGNED: Booking types matching your table
     public enum BookingType {
         SINGLE_DAY("Single Day", "One-time booking for a single day"),
         MULTI_DAY("Multi-Day", "Booking spanning multiple consecutive days"),
@@ -39,23 +39,25 @@ public class Booking {
             this.description = description;
         }
 
-        public String getDisplayName() {
-            return displayName;
-        }
+        public String getDisplayName() { return displayName; }
+        public String getDescription() { return description; }
 
-        public String getDescription() {
-            return description;
+        // String conversion for database compatibility
+        public static BookingType fromString(String type) {
+            try {
+                return BookingType.valueOf(type.toUpperCase());
+            } catch (IllegalArgumentException e) {
+                return BookingType.SINGLE_DAY; // Default fallback
+            }
         }
     }
 
-    // ✅ ENHANCED: More detailed status workflow
+    // ✅ DATABASE ALIGNED: Status matching your table exactly
     public enum Status {
         PENDING("Pending", "⏳", "Awaiting admin approval"),
         APPROVED("Approved", "✅", "Confirmed and ready to use"),
         REJECTED("Rejected", "❌", "Request denied by admin"),
-        CANCELLED("Cancelled", "🚫", "Cancelled by user or admin"),
-        EXPIRED("Expired", "⏰", "Booking time has passed"),
-        IN_PROGRESS("In Progress", "🔄", "Currently being used");
+        CANCELLED("Cancelled", "🚫", "Cancelled by user or admin");
 
         private final String displayName;
         private final String icon;
@@ -67,25 +69,25 @@ public class Booking {
             this.description = description;
         }
 
-        public String getDisplayName() {
-            return displayName;
-        }
+        public String getDisplayName() { return displayName; }
+        public String getIcon() { return icon; }
+        public String getDescription() { return description; }
 
-        public String getIcon() {
-            return icon;
-        }
-
-        public String getDescription() {
-            return description;
+        // String conversion for database compatibility
+        public static Status fromString(String status) {
+            try {
+                return Status.valueOf(status.toUpperCase());
+            } catch (IllegalArgumentException e) {
+                return Status.PENDING; // Default fallback
+            }
         }
     }
 
-    // ✅ ENHANCED: VIP priority system with auto-escalation
+    // ✅ DATABASE ALIGNED: Priority levels matching your table exactly
     public enum PriorityLevel {
         NORMAL("Normal", "🟢", 1, "Standard priority"),
         HIGH("High", "🔴", 2, "High priority - faster approval"),
-        VIP("VIP", "🌟", 3, "VIP priority - immediate attention"),
-        EMERGENCY("Emergency", "🚨", 4, "Emergency - instant approval");
+        VIP("VIP", "🌟", 3, "VIP priority - immediate attention");
 
         private final String displayName;
         private final String icon;
@@ -99,64 +101,62 @@ public class Booking {
             this.description = description;
         }
 
-        public String getDisplayName() {
-            return displayName;
-        }
+        public String getDisplayName() { return displayName; }
+        public String getIcon() { return icon; }
+        public int getLevel() { return level; }
+        public String getDescription() { return description; }
 
-        public String getIcon() {
-            return icon;
-        }
-
-        public int getLevel() {
-            return level;
-        }
-
-        public String getDescription() {
-            return description;
+        // String conversion for database compatibility
+        public static PriorityLevel fromString(String priority) {
+            try {
+                return PriorityLevel.valueOf(priority.toUpperCase());
+            } catch (IllegalArgumentException e) {
+                return PriorityLevel.NORMAL; // Default fallback
+            }
         }
     }
 
-    // Core booking fields
-    private int bookingId;
-    private int userId;
-    private int cabinId;
-    private Date bookingDate;
-    private String timeSlot; // Format: "HH:MM-HH:MM" (e.g., "09:00-10:30")
-    private String purpose;
-    private BookingType bookingType;
-    private Status status;
-    private PriorityLevel priorityLevel;
-    private Timestamp createdAt;
-    private int approvedBy;
-    private Timestamp approvedAt;
+    // ✅ DATABASE FIELDS (exactly matching your bookings table)
+    private int bookingId;          // booking_id - PK, auto_increment
+    private int userId;             // user_id - NOT NULL, MUL
+    private int cabinId;            // cabin_id - NOT NULL, MUL
+    private Date bookingDate;       // booking_date - NOT NULL
+    private String timeSlot;        // time_slot - NOT NULL, varchar(20)
+    private String purpose;         // purpose - NOT NULL, text
+    private BookingType bookingType; // booking_type - NOT NULL, enum, default SINGLE_DAY
+    private Status status;          // status - enum, default PENDING
+    private PriorityLevel priorityLevel; // priority_level - enum, default NORMAL
+    private Timestamp createdAt;    // created_at - default CURRENT_TIMESTAMP
+    private int approvedBy;         // approved_by - nullable int
+    private Timestamp approvedAt;   // approved_at - nullable timestamp
 
-    // ✅ NEW: Additional fields for flexible duration system
-    private int durationMinutes; // Calculated from timeSlot
-    private String startTime; // Extracted from timeSlot (e.g., "09:00")
-    private String endTime; // Extracted from timeSlot (e.g., "10:30")
+    // ✅ CALCULATED FIELDS (not in database - for display/logic only)
+    private int durationMinutes;    // Calculated from timeSlot
+    private String startTime;       // Extracted from timeSlot (e.g., "09:00")
+    private String endTime;         // Extracted from timeSlot (e.g., "10:30")
 
-    // Additional fields for display (not in database)
-    private String userName;
-    private String cabinName;
-    private String approverName;
-    private String companyName;
+    // ✅ DISPLAY FIELDS (for UI - not in database)
+    private String userName;        // From users table join
+    private String cabinName;       // From cabins table join
+    private String approverName;    // From users table join (admin name)
 
-    // ✅ NEW: AI and analytics fields
-    private double conflictScore; // AI-calculated conflict probability
-    private boolean isRecommended; // AI recommendation flag
-    private String alternativeSlots; // JSON string of alternatives
+    // ✅ SINGLE COMPANY CONSTANTS
+    private static final String COMPANY_NAME = "Yash Technology";
+
+    // ================================
+    // CONSTRUCTORS
+    // ================================
 
     // Default Constructor
     public Booking() {
         this.bookingType = BookingType.SINGLE_DAY;
         this.status = Status.PENDING;
         this.priorityLevel = PriorityLevel.NORMAL;
-        this.conflictScore = 0.0;
-        this.isRecommended = false;
-        System.out.println("📅 New Booking object created");
+        this.durationMinutes = 0;
+        System.out.println("📅 New Booking object created for " + COMPANY_NAME);
     }
 
-    // ✅ ENHANCED: Constructor for flexible duration booking
+    // Constructor for new booking creation
     public Booking(int userId, int cabinId, Date bookingDate, String timeSlot, String purpose) {
         this();
         this.userId = userId;
@@ -164,14 +164,26 @@ public class Booking {
         this.bookingDate = bookingDate;
         this.timeSlot = timeSlot;
         this.purpose = purpose;
-
-        // ✅ NEW: Auto-calculate duration and times
         calculateTimeFields();
-
-        System.out.println("📅 Flexible booking created - User: " + userId + ", Duration: " + durationMinutes + " min");
+        System.out.println("📅 New booking created - User: " + userId + ", Duration: " + durationMinutes + " min");
     }
 
-    // ✅ ENHANCED: Full constructor with all fields
+    // Constructor with booking type and priority
+    public Booking(int userId, int cabinId, Date bookingDate, String timeSlot, String purpose,
+                   BookingType bookingType, PriorityLevel priorityLevel) {
+        this();
+        this.userId = userId;
+        this.cabinId = cabinId;
+        this.bookingDate = bookingDate;
+        this.timeSlot = timeSlot;
+        this.purpose = purpose;
+        this.bookingType = bookingType;
+        this.priorityLevel = priorityLevel;
+        calculateTimeFields();
+        System.out.println("📅 Enhanced booking created - Type: " + bookingType + ", Priority: " + priorityLevel);
+    }
+
+    // Full constructor (from database)
     public Booking(int bookingId, int userId, int cabinId, Date bookingDate, String timeSlot,
                    String purpose, BookingType bookingType, Status status, PriorityLevel priorityLevel,
                    Timestamp createdAt, int approvedBy, Timestamp approvedAt) {
@@ -187,14 +199,15 @@ public class Booking {
         this.createdAt = createdAt;
         this.approvedBy = approvedBy;
         this.approvedAt = approvedAt;
-
-        // ✅ NEW: Auto-calculate duration and times
         calculateTimeFields();
-
         System.out.println("💾 Booking loaded from database: " + bookingId + " (" + durationMinutes + " min)");
     }
 
-    // ✅ NEW: Smart time field calculation
+    // ================================
+    // TIME CALCULATION METHODS
+    // ================================
+
+    // Auto-calculate duration and time fields from timeSlot
     private void calculateTimeFields() {
         if (timeSlot != null && timeSlot.contains("-")) {
             try {
@@ -205,7 +218,6 @@ public class Booking {
                 // Calculate duration in minutes
                 LocalTime start = LocalTime.parse(startTime, DateTimeFormatter.ofPattern("HH:mm"));
                 LocalTime end = LocalTime.parse(endTime, DateTimeFormatter.ofPattern("HH:mm"));
-
                 this.durationMinutes = (int) java.time.Duration.between(start, end).toMinutes();
 
             } catch (Exception e) {
@@ -217,7 +229,11 @@ public class Booking {
         }
     }
 
-    // ✅ NEW: Smart validation methods
+    // ================================
+    // VALIDATION METHODS
+    // ================================
+
+    // Validate time slot format and duration
     public boolean isValidTimeSlot() {
         if (timeSlot == null || !timeSlot.contains("-")) {
             return false;
@@ -237,6 +253,7 @@ public class Booking {
         }
     }
 
+    // Check if booking is within business hours
     public boolean isWithinBusinessHours() {
         if (startTime == null || endTime == null) {
             return false;
@@ -245,7 +262,7 @@ public class Booking {
         try {
             LocalTime start = LocalTime.parse(startTime, DateTimeFormatter.ofPattern("HH:mm"));
             LocalTime end = LocalTime.parse(endTime, DateTimeFormatter.ofPattern("HH:mm"));
-            LocalTime businessStart = LocalTime.of(9, 0); // 9:00 AM
+            LocalTime businessStart = LocalTime.of(9, 0);  // 9:00 AM
             LocalTime businessEnd = LocalTime.of(18, 0);   // 6:00 PM
 
             return !start.isBefore(businessStart) && !end.isAfter(businessEnd);
@@ -255,7 +272,7 @@ public class Booking {
         }
     }
 
-    // ✅ NEW: Overlap detection method
+    // Check if this booking overlaps with another booking
     public boolean overlapsWith(Booking other) {
         if (other == null || !this.bookingDate.equals(other.bookingDate)) {
             return false;
@@ -274,7 +291,11 @@ public class Booking {
         }
     }
 
-    // ✅ NEW: Smart getters for flexible duration
+    // ================================
+    // DISPLAY METHODS
+    // ================================
+
+    // Get human-readable duration display
     public String getDurationDisplay() {
         if (durationMinutes < 60) {
             return durationMinutes + " minutes";
@@ -289,6 +310,7 @@ public class Booking {
         }
     }
 
+    // Get formatted time slot display
     public String getTimeSlotDisplay() {
         if (startTime != null && endTime != null) {
             return startTime + " - " + endTime + " (" + getDurationDisplay() + ")";
@@ -296,28 +318,84 @@ public class Booking {
         return timeSlot;
     }
 
-    // All your existing getters and setters...
+    // Get status display with icon
+    public String getStatusDisplay() {
+        return status.getIcon() + " " + status.getDisplayName();
+    }
+
+    // Get priority display with icon
+    public String getPriorityDisplay() {
+        return priorityLevel.getIcon() + " " + priorityLevel.getDisplayName();
+    }
+
+    // Get booking type display
+    public String getBookingTypeDisplay() {
+        return bookingType.getDisplayName();
+    }
+
+    // ================================
+    // BUSINESS LOGIC METHODS
+    // ================================
+
+    // Status check methods
+    public boolean isPending() { return this.status == Status.PENDING; }
+    public boolean isApproved() { return this.status == Status.APPROVED; }
+    public boolean isRejected() { return this.status == Status.REJECTED; }
+    public boolean isCancelled() { return this.status == Status.CANCELLED; }
+
+    // Priority check methods
+    public boolean isVipPriority() { return this.priorityLevel == PriorityLevel.VIP; }
+    public boolean isHighPriority() { return this.priorityLevel.getLevel() >= PriorityLevel.HIGH.getLevel(); }
+
+    // Business rule methods
+    public boolean canBeCancelled() {
+        return status == Status.PENDING || status == Status.APPROVED;
+    }
+
+    public boolean requiresApproval() {
+        return status == Status.PENDING;
+    }
+
+    public boolean isUpcoming() {
+        if (bookingDate == null) return false;
+
+        try {
+            Date today = new Date(System.currentTimeMillis());
+            return bookingDate.after(today) || bookingDate.equals(today);
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    // ================================
+    // GETTERS AND SETTERS
+    // ================================
+
+    // Primary key
     public int getBookingId() { return bookingId; }
     public void setBookingId(int bookingId) { this.bookingId = bookingId; }
 
+    // Foreign keys
     public int getUserId() { return userId; }
     public void setUserId(int userId) { this.userId = userId; }
 
     public int getCabinId() { return cabinId; }
     public void setCabinId(int cabinId) { this.cabinId = cabinId; }
 
+    // Core booking fields
     public Date getBookingDate() { return bookingDate; }
     public void setBookingDate(Date bookingDate) { this.bookingDate = bookingDate; }
 
     public String getTimeSlot() { return timeSlot; }
     public void setTimeSlot(String timeSlot) {
         this.timeSlot = timeSlot;
-        calculateTimeFields(); // ✅ Auto-recalculate when timeSlot changes
+        calculateTimeFields(); // Auto-recalculate when timeSlot changes
     }
 
     public String getPurpose() { return purpose; }
     public void setPurpose(String purpose) { this.purpose = purpose; }
 
+    // Enum fields
     public BookingType getBookingType() { return bookingType; }
     public void setBookingType(BookingType bookingType) { this.bookingType = bookingType; }
 
@@ -327,6 +405,7 @@ public class Booking {
     public PriorityLevel getPriorityLevel() { return priorityLevel; }
     public void setPriorityLevel(PriorityLevel priorityLevel) { this.priorityLevel = priorityLevel; }
 
+    // Timestamp fields
     public Timestamp getCreatedAt() { return createdAt; }
     public void setCreatedAt(Timestamp createdAt) { this.createdAt = createdAt; }
 
@@ -336,7 +415,7 @@ public class Booking {
     public Timestamp getApprovedAt() { return approvedAt; }
     public void setApprovedAt(Timestamp approvedAt) { this.approvedAt = approvedAt; }
 
-    // ✅ NEW: Flexible duration getters/setters
+    // Calculated fields
     public int getDurationMinutes() { return durationMinutes; }
     public void setDurationMinutes(int durationMinutes) { this.durationMinutes = durationMinutes; }
 
@@ -346,7 +425,7 @@ public class Booking {
     public String getEndTime() { return endTime; }
     public void setEndTime(String endTime) { this.endTime = endTime; }
 
-    // Display fields
+    // Display fields (for UI)
     public String getUserName() { return userName; }
     public void setUserName(String userName) { this.userName = userName; }
 
@@ -356,49 +435,12 @@ public class Booking {
     public String getApproverName() { return approverName; }
     public void setApproverName(String approverName) { this.approverName = approverName; }
 
-    public String getCompanyName() { return companyName; }
-    public void setCompanyName(String companyName) { this.companyName = companyName; }
+    // Company info (single company)
+    public String getCompanyName() { return COMPANY_NAME; }
 
-    // ✅ NEW: AI and analytics getters/setters
-    public double getConflictScore() { return conflictScore; }
-    public void setConflictScore(double conflictScore) { this.conflictScore = conflictScore; }
-
-    public boolean isRecommended() { return isRecommended; }
-    public void setRecommended(boolean recommended) { isRecommended = recommended; }
-
-    public String getAlternativeSlots() { return alternativeSlots; }
-    public void setAlternativeSlots(String alternativeSlots) { this.alternativeSlots = alternativeSlots; }
-
-    // ✅ ENHANCED: Utility methods
-    public boolean isPending() { return this.status == Status.PENDING; }
-    public boolean isApproved() { return this.status == Status.APPROVED; }
-    public boolean isRejected() { return this.status == Status.REJECTED; }
-    public boolean isCancelled() { return this.status == Status.CANCELLED; }
-    public boolean isExpired() { return this.status == Status.EXPIRED; }
-    public boolean isInProgress() { return this.status == Status.IN_PROGRESS; }
-    public boolean isVipPriority() { return this.priorityLevel == PriorityLevel.VIP; }
-    public boolean isEmergency() { return this.priorityLevel == PriorityLevel.EMERGENCY; }
-
-    public String getStatusDisplay() {
-        return status.getIcon() + " " + status.getDisplayName();
-    }
-
-    public String getPriorityDisplay() {
-        return priorityLevel.getIcon() + " " + priorityLevel.getDisplayName();
-    }
-
-    // ✅ NEW: Business logic methods
-    public boolean canBeCancelled() {
-        return status == Status.PENDING || status == Status.APPROVED;
-    }
-
-    public boolean requiresApproval() {
-        return status == Status.PENDING;
-    }
-
-    public boolean isHighPriority() {
-        return priorityLevel.getLevel() >= PriorityLevel.HIGH.getLevel();
-    }
+    // ================================
+    // UTILITY METHODS
+    // ================================
 
     @Override
     public String toString() {
@@ -410,9 +452,24 @@ public class Booking {
                 ", timeSlot='" + timeSlot + '\'' +
                 ", duration=" + getDurationDisplay() +
                 ", purpose='" + purpose + '\'' +
+                ", bookingType=" + bookingType +
                 ", status=" + status +
                 ", priorityLevel=" + priorityLevel +
                 ", createdAt=" + createdAt +
                 '}';
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (this == obj) return true;
+        if (obj == null || getClass() != obj.getClass()) return false;
+
+        Booking booking = (Booking) obj;
+        return bookingId == booking.bookingId;
+    }
+
+    @Override
+    public int hashCode() {
+        return Integer.hashCode(bookingId);
     }
 }

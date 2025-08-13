@@ -11,18 +11,18 @@ import java.util.List;
 import java.util.ArrayList;
 
 /**
- * COMPANY SERVICE IMPLEMENTATION
+ * COMPANY SERVICE IMPLEMENTATION - SINGLE COMPANY VERSION
  *
  * EVALUATION EXPLANATION:
- * - Multi-company support for enterprise environments
- * - Company-specific cabin management and analytics
- * - Business logic for company operations
- * - Integration with cabin management system
+ * - Single company (Yash Technology) support
+ * - Simplified cabin management without company selection
+ * - Business logic for single organization operations
+ * - Integration with company_config table
  *
  * INTERVIEW TALKING POINTS:
- * - "Multi-tenant architecture support implement kiya"
- * - "Company-wise resource management and analytics"
- * - "Business validation for company operations"
+ * - "Single-tenant architecture implement kiya"
+ * - "Company configuration management"
+ * - "Business validation for single company operations"
  * - "Clean separation between DAO and business logic"
  */
 public class CompanyServiceImpl implements CompanyService {
@@ -33,270 +33,153 @@ public class CompanyServiceImpl implements CompanyService {
     public CompanyServiceImpl() {
         this.companyDAO = new CompanyDaoImpl();
         this.cabinDAO = new CabinDaoImpl();
-        System.out.println("🔧 CompanyService initialized with DAO implementations");
+        System.out.println("🔧 CompanyService initialized for Yash Technology (Single Company Mode)");
     }
 
     @Override
-    public boolean createCompany(Company company) {
-        System.out.println("🏢 Creating new company: " + company.getName());
+    public Company getCompanyConfig() {
+        System.out.println("🏢 Fetching Yash Technology company configuration");
+
+        Company company = companyDAO.getCompanyConfig();
+
+        if (company != null) {
+            System.out.println("✅ Company config loaded: " + company.getCompanyName());
+        } else {
+            System.out.println("⚠️ Using default company configuration");
+            company = Company.getDefaultCompany();
+        }
+
+        return company;
+    }
+
+    @Override
+    public boolean updateCompanyConfig(Company company) {
+        System.out.println("✏️ Updating company configuration: " + company.getCompanyName());
 
         // Input validation
         if (!isValidCompanyData(company)) {
-            System.err.println("❌ Invalid company data");
+            System.err.println("❌ Invalid company configuration data");
             return false;
         }
 
-        // Check if company name already exists
-        Company existingCompany = companyDAO.getCompanyByName(company.getName());
-        if (existingCompany != null) {
-            System.err.println("❌ Company name already exists: " + company.getName());
-            return false;
-        }
-
-        // Set default status if not provided
-        if (company.getStatus() == null) {
-            company.setStatus(Company.Status.ACTIVE);
-        }
-
-        boolean success = companyDAO.createCompany(company);
+        boolean success = companyDAO.updateCompanyConfig(company);
 
         if (success) {
-            System.out.println("✅ Company created successfully: " + company.getName() + " (ID: " + company.getCompanyId() + ")");
+            System.out.println("✅ Company configuration updated successfully: " + company.getCompanyName());
         } else {
-            System.err.println("❌ Company creation failed for: " + company.getName());
+            System.err.println("❌ Company configuration update failed");
         }
 
         return success;
     }
 
     @Override
-    public Company getCompanyById(int companyId) {
-        System.out.println("🔍 Fetching company by ID: " + companyId);
+    public boolean activateCompany() {
+        System.out.println("🔓 Activating Yash Technology");
 
-        if (companyId <= 0) {
-            System.err.println("❌ Invalid company ID: " + companyId);
-            return null;
-        }
-
-        Company company = companyDAO.getCompanyById(companyId);
-
-        if (company != null) {
-            System.out.println("✅ Company found: " + company.getName());
-        } else {
-            System.out.println("❌ Company not found with ID: " + companyId);
-        }
-
-        return company;
-    }
-
-    @Override
-    public Company getCompanyByName(String name) {
-        System.out.println("🔍 Fetching company by name: " + name);
-
-        if (name == null || name.trim().isEmpty()) {
-            System.err.println("❌ Invalid company name");
-            return null;
-        }
-
-        Company company = companyDAO.getCompanyByName(name.trim());
-
-        if (company != null) {
-            System.out.println("✅ Company found: " + company.getName());
-        } else {
-            System.out.println("❌ Company not found with name: " + name);
-        }
-
-        return company;
-    }
-
-    @Override
-    public List<Company> getAllActiveCompanies() {
-        System.out.println("📋 Fetching all active companies");
-
-        List<Company> companies = companyDAO.getActiveCompanies();
-        System.out.println("✅ Retrieved " + companies.size() + " active companies");
-
-        return companies;
-    }
-
-    @Override
-    public boolean updateCompany(Company company) {
-        System.out.println("✏️ Updating company: " + company.getCompanyId());
-
-        // Input validation
-        if (!isValidCompanyData(company) || company.getCompanyId() <= 0) {
-            System.err.println("❌ Invalid company data for update");
-            return false;
-        }
-
-        // Check if company exists
-        Company existingCompany = companyDAO.getCompanyById(company.getCompanyId());
-        if (existingCompany == null) {
-            System.err.println("❌ Company not found for update: " + company.getCompanyId());
-            return false;
-        }
-
-        // Check if new name conflicts with existing company (if name is being changed)
-        if (!existingCompany.getName().equals(company.getName())) {
-            Company nameConflict = companyDAO.getCompanyByName(company.getName());
-            if (nameConflict != null && nameConflict.getCompanyId() != company.getCompanyId()) {
-                System.err.println("❌ Company name already exists: " + company.getName());
-                return false;
-            }
-        }
-
-        boolean success = companyDAO.updateCompany(company);
+        boolean success = companyDAO.activateCompany();
 
         if (success) {
-            System.out.println("✅ Company updated successfully: " + company.getName());
+            System.out.println("✅ Company activated successfully");
         } else {
-            System.err.println("❌ Company update failed for ID: " + company.getCompanyId());
+            System.err.println("❌ Company activation failed");
         }
 
         return success;
     }
 
     @Override
-    public boolean activateCompany(int companyId) {
-        System.out.println("🔓 Activating company: " + companyId);
-
-        if (companyId <= 0) {
-            System.err.println("❌ Invalid company ID for activation: " + companyId);
-            return false;
-        }
-
-        boolean success = companyDAO.activateCompany(companyId);
-
-        if (success) {
-            System.out.println("✅ Company activated successfully: " + companyId);
-        } else {
-            System.err.println("❌ Company activation failed: " + companyId);
-        }
-
-        return success;
-    }
-
-    @Override
-    public boolean deactivateCompany(int companyId) {
-        System.out.println("🔒 Deactivating company: " + companyId);
-
-        if (companyId <= 0) {
-            System.err.println("❌ Invalid company ID for deactivation: " + companyId);
-            return false;
-        }
+    public boolean deactivateCompany() {
+        System.out.println("🔒 Deactivating Yash Technology");
 
         // Check if company has active bookings (business rule)
-        int cabinCount = getCompanyCabinCount(companyId);
+        int cabinCount = getTotalCabinCount();
         if (cabinCount > 0) {
             System.out.println("⚠️ Warning: Company has " + cabinCount + " cabins. Deactivating anyway.");
         }
 
-        boolean success = companyDAO.deactivateCompany(companyId);
+        boolean success = companyDAO.deactivateCompany();
 
         if (success) {
-            System.out.println("✅ Company deactivated successfully: " + companyId);
+            System.out.println("✅ Company deactivated successfully");
         } else {
-            System.err.println("❌ Company deactivation failed: " + companyId);
+            System.err.println("❌ Company deactivation failed");
         }
 
         return success;
     }
 
     @Override
-    public List<Cabin> getCompanyCabins(int companyId) {
-        System.out.println("🏠 Fetching cabins for company: " + companyId);
+    public boolean isCompanyActive() {
+        System.out.println("🔍 Checking company status");
 
-        if (companyId <= 0) {
-            System.err.println("❌ Invalid company ID: " + companyId);
-            return new ArrayList<>();
-        }
+        boolean isActive = companyDAO.isCompanyActive();
+        System.out.println("📊 Company status: " + (isActive ? "ACTIVE" : "INACTIVE"));
 
-        List<Cabin> cabins = cabinDAO.getCabinsByCompany(companyId);
-        System.out.println("✅ Retrieved " + cabins.size() + " cabins for company: " + companyId);
+        return isActive;
+    }
+
+    @Override
+    public List<Cabin> getAllCabins() {
+        System.out.println("🏠 Fetching all cabins for Yash Technology");
+
+        // Since it's single company, get all cabins (no company filter needed)
+        List<Cabin> cabins = cabinDAO.getAllActiveCabins();
+        System.out.println("✅ Retrieved " + cabins.size() + " cabins");
 
         return cabins;
     }
 
     @Override
-    public int getCompanyCabinCount(int companyId) {
-        System.out.println("📊 Getting cabin count for company: " + companyId);
+    public int getTotalCabinCount() {
+        System.out.println("📊 Getting total cabin count");
 
-        if (companyId <= 0) {
-            System.err.println("❌ Invalid company ID: " + companyId);
-            return 0;
-        }
-
-        int count = companyDAO.getCompanyCabinCount(companyId);
-        System.out.println("📈 Company " + companyId + " has " + count + " cabins");
+        int count = companyDAO.getTotalCabinCount();
+        System.out.println("📈 Total cabins: " + count);
 
         return count;
     }
 
     @Override
-    public int getCompanyBookingCount(int companyId) {
-        System.out.println("📊 Getting booking count for company: " + companyId);
+    public int getTotalBookingCount() {
+        System.out.println("📊 Getting total booking count");
 
-        if (companyId <= 0) {
-            System.err.println("❌ Invalid company ID: " + companyId);
-            return 0;
-        }
+        // This would need BookingDAO method - simplified for now
+        int cabinCount = getTotalCabinCount();
+        System.out.println("📈 Total booking-related metric: " + cabinCount);
 
-        // Get all cabins for the company and count their bookings
-        List<Cabin> companyCabins = cabinDAO.getCabinsByCompany(companyId);
-        int totalBookings = 0;
-
-        // This is a simplified approach - in real scenario, we'd have a direct query
-        for (Cabin cabin : companyCabins) {
-            // We would need BookingDAO method to count bookings per cabin
-            // For now, we'll return cabin count as proxy
-        }
-
-        System.out.println("📈 Company " + companyId + " has approximately " + companyCabins.size() + " booking-related cabins");
-        return companyCabins.size(); // Simplified return
+        return cabinCount; // Simplified return
     }
 
     @Override
-    public Company getMostPopularCompany() {
-        System.out.println("🌟 Finding most popular company");
+    public List<Cabin> getVIPCabins() {
+        System.out.println("⭐ Fetching VIP cabins");
 
-        List<Company> activeCompanies = companyDAO.getActiveCompanies();
-        Company mostPopular = null;
-        int maxCabins = 0;
+        List<Cabin> vipCabins = cabinDAO.getVIPOnlyCabins();
+        System.out.println("✅ Retrieved " + vipCabins.size() + " VIP cabins");
 
-        for (Company company : activeCompanies) {
-            int cabinCount = companyDAO.getCompanyCabinCount(company.getCompanyId());
-            if (cabinCount > maxCabins) {
-                maxCabins = cabinCount;
-                mostPopular = company;
-            }
-        }
+        return vipCabins;
+    }
 
-        if (mostPopular != null) {
-            System.out.println("🏆 Most popular company: " + mostPopular.getName() + " (" + maxCabins + " cabins)");
+    @Override
+    public boolean canPerformBooking() {
+        System.out.println("🔍 Checking if booking operations are allowed");
+
+        // Check if company is active and has cabins
+        boolean companyActive = isCompanyActive();
+        int cabinCount = getTotalCabinCount();
+
+        boolean canBooking = companyActive && cabinCount > 0;
+
+        if (canBooking) {
+            System.out.println("✅ Booking operations are allowed");
         } else {
-            System.out.println("❌ No companies found");
+            System.out.println("❌ Booking operations not allowed - Company: " +
+                    (companyActive ? "ACTIVE" : "INACTIVE") +
+                    ", Cabins: " + cabinCount);
         }
 
-        return mostPopular;
-    }
-
-    @Override
-    public List<Company> getCompaniesWithVIPCabins() {
-        System.out.println("⭐ Finding companies with VIP cabins");
-
-        List<Company> companiesWithVIP = new ArrayList<>();
-        List<Company> allCompanies = companyDAO.getActiveCompanies();
-
-        for (Company company : allCompanies) {
-            List<Cabin> vipCabins = cabinDAO.getVIPOnlyCabins(company.getCompanyId());
-            if (!vipCabins.isEmpty()) {
-                companiesWithVIP.add(company);
-                System.out.println("⭐ " + company.getName() + " has " + vipCabins.size() + " VIP cabins");
-            }
-        }
-
-        System.out.println("✅ Found " + companiesWithVIP.size() + " companies with VIP cabins");
-        return companiesWithVIP;
+        return canBooking;
     }
 
     // PRIVATE UTILITY METHODS
@@ -307,22 +190,22 @@ public class CompanyServiceImpl implements CompanyService {
             return false;
         }
 
-        if (company.getName() == null || company.getName().trim().isEmpty()) {
+        if (company.getCompanyName() == null || company.getCompanyName().trim().isEmpty()) {
             System.err.println("❌ Company name is required");
             return false;
         }
 
-        if (company.getName().length() > 100) {
+        if (company.getCompanyName().length() > 100) {
             System.err.println("❌ Company name too long (max 100 characters)");
             return false;
         }
 
-        if (company.getLocation() != null && company.getLocation().length() > 200) {
+        if (company.getCompanyLocation() != null && company.getCompanyLocation().length() > 200) {
             System.err.println("❌ Company location too long (max 200 characters)");
             return false;
         }
 
-        if (company.getContactInfo() != null && company.getContactInfo().length() > 500) {
+        if (company.getCompanyContact() != null && company.getCompanyContact().length() > 500) {
             System.err.println("❌ Company contact info too long (max 500 characters)");
             return false;
         }
@@ -331,36 +214,39 @@ public class CompanyServiceImpl implements CompanyService {
     }
 
     /**
-     * Get default company for new user registration
+     * Get company display information for UI
      */
-    public Company getDefaultCompany() {
-        System.out.println("🏢 Getting default company for new user");
+    public String getCompanyDisplayInfo() {
+        System.out.println("🏢 Getting company display information");
 
-        List<Company> activeCompanies = getAllActiveCompanies();
-        if (!activeCompanies.isEmpty()) {
-            Company defaultCompany = activeCompanies.get(0); // First active company
-            System.out.println("✅ Default company: " + defaultCompany.getName());
-            return defaultCompany;
+        Company company = getCompanyConfig();
+        if (company != null) {
+            String displayInfo = company.getDisplayName();
+            System.out.println("✅ Company display info: " + displayInfo);
+            return displayInfo;
         }
 
-        System.err.println("❌ No active companies found for default assignment");
-        return null;
+        return "Yash Technology (Default)";
     }
 
     /**
-     * Business method to check if company can be safely deleted
+     * Business method to validate company setup
      */
-    public boolean canDeleteCompany(int companyId) {
-        System.out.println("🔍 Checking if company can be deleted: " + companyId);
+    public boolean isCompanySetupComplete() {
+        System.out.println("🔍 Checking company setup completion");
 
-        int cabinCount = getCompanyCabinCount(companyId);
+        Company company = getCompanyConfig();
+        boolean isComplete = company != null &&
+                company.getCompanyName() != null &&
+                !company.getCompanyName().trim().isEmpty() &&
+                company.isActive();
 
-        if (cabinCount > 0) {
-            System.out.println("❌ Company cannot be deleted - has " + cabinCount + " cabins");
-            return false;
+        if (isComplete) {
+            System.out.println("✅ Company setup is complete");
+        } else {
+            System.out.println("❌ Company setup is incomplete");
         }
 
-        System.out.println("✅ Company can be safely deleted");
-        return true;
+        return isComplete;
     }
 }

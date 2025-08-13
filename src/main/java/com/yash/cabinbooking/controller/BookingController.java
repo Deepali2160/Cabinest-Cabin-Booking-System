@@ -6,7 +6,6 @@ import com.yash.cabinbooking.daoimpl.BookingDaoImpl;
 import com.yash.cabinbooking.service.BookingService;
 import com.yash.cabinbooking.service.UserService;
 import com.yash.cabinbooking.service.CompanyService;
-import com.yash.cabinbooking.service.AIRecommendationService;
 import com.yash.cabinbooking.serviceimpl.*;
 import com.yash.cabinbooking.model.*;
 
@@ -21,9 +20,11 @@ import java.sql.Date;
 import java.util.List;
 import java.util.ArrayList;
 import java.text.SimpleDateFormat;
+import java.util.stream.Collectors;
 
 /**
- * BOOKING CONTROLLER - FLEXIBLE DURATION SYSTEM
+ * BOOKING CONTROLLER - SINGLE COMPANY VERSION
+ * Modified for Yash Technology single company usage
  */
 @WebServlet(name = "BookingController", urlPatterns = {"/booking/*", "/book", "/mybookings"})
 public class BookingController extends HttpServlet {
@@ -31,7 +32,7 @@ public class BookingController extends HttpServlet {
     private BookingService bookingService;
     private UserService userService;
     private CompanyService companyService;
-    private AIRecommendationService aiService;
+    // ✅ REMOVED: AIRecommendationService (causing errors)
     private CabinDao cabinDAO;
 
     @Override
@@ -39,9 +40,9 @@ public class BookingController extends HttpServlet {
         this.bookingService = new BookingServiceImpl();
         this.userService = new UserServiceImpl();
         this.companyService = new CompanyServiceImpl();
-        this.aiService = new AIRecommendationServiceImpl();
+        // ✅ REMOVED: this.aiService = new AIRecommendationServiceImpl();
         this.cabinDAO = new CabinDaoImpl();
-        System.out.println("🔧 BookingController initialized successfully");
+        System.out.println("🔧 BookingController initialized for Yash Technology (Single Company)");
     }
 
     @Override
@@ -97,8 +98,11 @@ public class BookingController extends HttpServlet {
             case "book":
                 processBooking(request, response, currentUser);
                 break;
-            case "availability":
+            case "availability":  // ✅ ADD THIS CASE
                 checkAvailability(request, response, currentUser);
+                break;
+            case "multiDayAvailability":  // ✅ ADD THIS CASE TOO
+                checkMultiDayAvailability(request, response, currentUser);
                 break;
             default:
                 showMyBookings(request, response, currentUser);
@@ -106,36 +110,37 @@ public class BookingController extends HttpServlet {
         }
     }
 
+    // ✅ UPDATED: Single company booking form
     private void showBookingForm(HttpServletRequest request, HttpServletResponse response, User user)
             throws ServletException, IOException {
         System.out.println("📝 Showing booking form for user: " + user.getName());
 
         try {
             String cabinIdStr = request.getParameter("cabinId");
-            String companyIdStr = request.getParameter("companyId");
 
-            int companyId = user.getDefaultCompanyId();
-            if (companyIdStr != null && !companyIdStr.trim().isEmpty()) {
-                try {
-                    companyId = Integer.parseInt(companyIdStr);
-                } catch (NumberFormatException e) {
-                    System.err.println("❌ Invalid company ID: " + companyIdStr);
-                }
-            }
-
-            Company company = companyService.getCompanyById(companyId);
+            // ✅ SINGLE COMPANY: Get company config instead of by ID
+            Company company = companyService.getCompanyConfig();
             if (company == null) {
-                System.err.println("❌ Company not found: " + companyId);
-                response.sendError(HttpServletResponse.SC_NOT_FOUND, "Company not found");
+                System.err.println("❌ Company configuration not found");
+                request.setAttribute("error", "Company configuration not available");
+                request.getRequestDispatcher("/common/error.jsp").forward(request, response);
                 return;
             }
 
-            List<Cabin> accessibleCabins = cabinDAO.getAccessibleCabins(companyId, user);
-            List<Cabin> recommendedCabins = aiService.getRecommendedCabinsForUser(user, companyId);
-            List<String> popularTimeSlots = aiService.getPopularTimeSlots();
-            List<String> suggestedPurposes = aiService.suggestBookingPurposes(user);
+            // ✅ UPDATED: Get accessible cabins without company ID
+            List<Cabin> accessibleCabins = cabinDAO.getAccessibleCabins(user);
 
-            // ✅ NEW: Add duration options and start times
+            // ✅ REMOVED: AI recommendations (causing errors)
+            // List<Cabin> recommendedCabins = aiService.getRecommendedCabinsForUser(user, companyId);
+            List<Cabin> recommendedCabins = new ArrayList<>();
+
+            // ✅ SIMPLIFIED: Popular time slots without AI
+            List<String> popularTimeSlots = bookingService.getPopularTimeSlots();
+
+            // ✅ REMOVED: AI suggested purposes
+            List<String> suggestedPurposes = getCommonBookingPurposes();
+
+            // Duration options and start times
             BookingDaoImpl bookingDao = new BookingDaoImpl();
             List<Integer> availableDurations = bookingDao.getAvailableDurations();
             List<String> startTimeOptions = generateStartTimeOptions();
@@ -170,7 +175,6 @@ public class BookingController extends HttpServlet {
 
             System.out.println("✅ Booking form loaded successfully");
             System.out.println("   - Available cabins: " + accessibleCabins.size());
-            System.out.println("   - AI recommendations: " + recommendedCabins.size());
             System.out.println("   - Duration options: " + availableDurations.size());
 
             request.getRequestDispatcher("/user/booking-form.jsp").forward(request, response);
@@ -264,7 +268,6 @@ public class BookingController extends HttpServlet {
         }
     }
 
-    // ✅ ENHANCED: Flexible duration availability checking
     private void checkAvailability(HttpServletRequest request, HttpServletResponse response, User user)
             throws ServletException, IOException {
         System.out.println("🔍 Checking availability for AJAX request");
@@ -275,9 +278,9 @@ public class BookingController extends HttpServlet {
         String durationStr = request.getParameter("duration");
 
         response.setContentType("application/json");
+        response.setCharacterEncoding("UTF-8");
 
         try {
-            // ✅ FIX: Validate all parameters
             if (cabinIdStr == null || cabinIdStr.trim().isEmpty() ||
                     dateStr == null || dateStr.trim().isEmpty() ||
                     startTime == null || startTime.trim().isEmpty() ||
@@ -292,7 +295,6 @@ public class BookingController extends HttpServlet {
             Date date = Date.valueOf(dateStr);
             int duration = Integer.parseInt(durationStr);
 
-            // ✅ Generate time slot from start time + duration
             String timeSlot = generateTimeSlot(startTime, duration);
 
             if (timeSlot == null) {
@@ -308,6 +310,7 @@ public class BookingController extends HttpServlet {
             if (isAvailable) {
                 response.getWriter().write("{\"available\": true, \"timeSlot\": \"" + timeSlot + "\"}");
             } else {
+                // Get alternatives using your DAO
                 BookingDaoImpl bookingDao = new BookingDaoImpl();
                 List<String> alternativeSlots = bookingDao.getAlternativeTimeSlots(cabinId, date, timeSlot, 3);
 
@@ -327,6 +330,8 @@ public class BookingController extends HttpServlet {
         }
     }
 
+
+    // ✅ UPDATED: Single company my bookings
     private void showMyBookings(HttpServletRequest request, HttpServletResponse response, User user)
             throws ServletException, IOException {
         System.out.println("📋 Loading bookings for user: " + user.getName());
@@ -336,18 +341,24 @@ public class BookingController extends HttpServlet {
 
             List<Booking> pendingBookings = userBookings.stream()
                     .filter(booking -> booking.getStatus() == Booking.Status.PENDING)
-                    .collect(java.util.stream.Collectors.toList());
+                    .collect(Collectors.toList());
 
             List<Booking> approvedBookings = userBookings.stream()
                     .filter(booking -> booking.getStatus() == Booking.Status.APPROVED)
-                    .collect(java.util.stream.Collectors.toList());
+                    .collect(Collectors.toList());
 
             List<Booking> rejectedBookings = userBookings.stream()
                     .filter(booking -> booking.getStatus() == Booking.Status.REJECTED)
-                    .collect(java.util.stream.Collectors.toList());
+                    .collect(Collectors.toList());
 
-            List<Cabin> recommendedCabins = aiService.getRecommendedCabinsForUser(user, user.getDefaultCompanyId());
-            double bookingScore = aiService.calculateUserBookingScore(user);
+            // ✅ SIMPLIFIED: Without AI recommendations
+            List<Cabin> recommendedCabins = cabinDAO.getVIPOnlyCabins();
+            if (recommendedCabins.size() > 3) {
+                recommendedCabins = recommendedCabins.subList(0, 3);
+            }
+
+            // ✅ SIMPLIFIED: Basic booking score
+            double bookingScore = calculateBasicBookingScore(userBookings);
 
             request.setAttribute("user", user);
             request.setAttribute("allBookings", userBookings);
@@ -437,7 +448,7 @@ public class BookingController extends HttpServlet {
 
     private void getAlternatives(HttpServletRequest request, HttpServletResponse response, User user)
             throws ServletException, IOException {
-        System.out.println("🔄 Getting AI alternatives for user: " + user.getName());
+        System.out.println("🔄 Getting alternatives for user: " + user.getName());
 
         String cabinIdStr = request.getParameter("cabinId");
         String dateStr = request.getParameter("date");
@@ -468,7 +479,9 @@ public class BookingController extends HttpServlet {
         }
     }
 
+    // ================================
     // UTILITY METHODS
+    // ================================
 
     private User getCurrentUser(HttpServletRequest request) {
         HttpSession session = request.getSession(false);
@@ -503,19 +516,16 @@ public class BookingController extends HttpServlet {
         return action.isEmpty() ? "mybookings" : action;
     }
 
-    // ✅ NEW: Generate time slot from start time + duration
     private String generateTimeSlot(String startTime, int durationMinutes) {
         try {
             String[] parts = startTime.split(":");
             int hours = Integer.parseInt(parts[0]);
             int minutes = Integer.parseInt(parts[1]);
 
-            // Calculate end time
             int totalMinutes = hours * 60 + minutes + durationMinutes;
             int endHours = totalMinutes / 60;
             int endMins = totalMinutes % 60;
 
-            // Check if within business hours (9 AM to 6 PM)
             if (endHours > 18) {
                 return null; // Beyond business hours
             }
@@ -529,7 +539,6 @@ public class BookingController extends HttpServlet {
         }
     }
 
-    // ✅ NEW: Generate start time options with 15-minute intervals
     private List<String> generateStartTimeOptions() {
         List<String> startTimes = new ArrayList<>();
 
@@ -540,6 +549,32 @@ public class BookingController extends HttpServlet {
         }
 
         return startTimes;
+    }
+
+    // ✅ NEW: Common booking purposes (replacement for AI suggestions)
+    private List<String> getCommonBookingPurposes() {
+        List<String> purposes = new ArrayList<>();
+        purposes.add("Team Meeting");
+        purposes.add("Client Presentation");
+        purposes.add("Training Session");
+        purposes.add("Project Discussion");
+        purposes.add("Interview");
+        purposes.add("Workshop");
+        purposes.add("Conference Call");
+        purposes.add("Strategy Planning");
+        return purposes;
+    }
+
+    // ✅ NEW: Basic booking score calculation (replacement for AI)
+    private double calculateBasicBookingScore(List<Booking> bookings) {
+        if (bookings.isEmpty()) return 0.0;
+
+        long approvedBookings = bookings.stream()
+                .filter(b -> b.getStatus() == Booking.Status.APPROVED)
+                .count();
+
+        double approvalRate = (double) approvedBookings / bookings.size();
+        return Math.min(100.0, approvalRate * 100.0);
     }
 
     private String validateBookingInput(String cabinIdStr, String bookingDateStr, String timeSlot, String purpose) {
@@ -581,4 +616,73 @@ public class BookingController extends HttpServlet {
 
         return null;
     }
+    private void checkMultiDayAvailability(HttpServletRequest request, HttpServletResponse response, User user)
+            throws ServletException, IOException {
+        System.out.println("🔍 Checking multi-day availability for AJAX request");
+
+        String cabinIdStr = request.getParameter("cabinId");
+        String startDateStr = request.getParameter("startDate");
+        String endDateStr = request.getParameter("endDate");
+
+        response.setContentType("application/json");
+        response.setCharacterEncoding("UTF-8");
+
+        try {
+            if (cabinIdStr == null || cabinIdStr.trim().isEmpty() ||
+                    startDateStr == null || startDateStr.trim().isEmpty() ||
+                    endDateStr == null || endDateStr.trim().isEmpty()) {
+
+                System.err.println("❌ Missing parameters in multi-day availability check");
+                response.getWriter().write("{\"available\": false, \"error\": \"Missing parameters\"}");
+                return;
+            }
+
+            int cabinId = Integer.parseInt(cabinIdStr);
+            Date startDate = Date.valueOf(startDateStr);
+            Date endDate = Date.valueOf(endDateStr);
+
+            // Check if date range is valid (max 30 days)
+            long diffInMillies = endDate.getTime() - startDate.getTime();
+            long diffInDays = diffInMillies / (1000 * 60 * 60 * 24);
+
+            if (diffInDays > 30) {
+                response.getWriter().write("{\"available\": false, \"error\": \"Maximum 30 days allowed\"}");
+                return;
+            }
+
+            if (diffInDays < 0) {
+                response.getWriter().write("{\"available\": false, \"error\": \"End date must be after start date\"}");
+                return;
+            }
+
+            // Check availability for each day in the range
+            List<String> conflictDays = new ArrayList<>();
+            Date currentDate = new Date(startDate.getTime());
+
+            while (!currentDate.after(endDate)) {
+                if (!bookingService.isSlotAvailable(cabinId, currentDate, "09:00-18:00")) {
+                    conflictDays.add(currentDate.toString());
+                }
+                // Move to next day
+                currentDate = new Date(currentDate.getTime() + (1000 * 60 * 60 * 24));
+            }
+
+            if (conflictDays.isEmpty()) {
+                response.getWriter().write("{\"available\": true}");
+            } else {
+                StringBuilder conflicts = new StringBuilder();
+                for (int i = 0; i < conflictDays.size(); i++) {
+                    if (i > 0) conflicts.append(", ");
+                    conflicts.append("\"").append(conflictDays.get(i)).append("\"");
+                }
+                response.getWriter().write("{\"available\": false, \"conflictDays\": [" + conflicts + "]}");
+            }
+
+        } catch (Exception e) {
+            System.err.println("❌ Error checking multi-day availability: " + e.getMessage());
+            e.printStackTrace();
+            response.getWriter().write("{\"available\": false, \"error\": \"Server error: " + e.getMessage() + "\"}");
+        }
+    }
+
 }

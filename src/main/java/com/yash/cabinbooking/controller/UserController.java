@@ -3,13 +3,10 @@ package com.yash.cabinbooking.controller;
 import com.yash.cabinbooking.service.UserService;
 import com.yash.cabinbooking.service.CompanyService;
 import com.yash.cabinbooking.service.BookingService;
-import com.yash.cabinbooking.service.AIRecommendationService;
 import com.yash.cabinbooking.serviceimpl.*;
 import com.yash.cabinbooking.model.*;
-// Add these missing imports
 import com.yash.cabinbooking.dao.CabinDao;
 import com.yash.cabinbooking.daoimpl.CabinDaoImpl;
-
 
 import javax.servlet.ServletException;
 import javax.servlet.annotation.WebServlet;
@@ -19,16 +16,15 @@ import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpSession;
 import java.io.IOException;
 import java.util.List;
+import java.util.stream.Collectors;
 
 /**
- * USER CONTROLLER
+ * USER CONTROLLER - SINGLE COMPANY VERSION
  *
- * EVALUATION EXPLANATION:
- * - User dashboard and profile management
- * - Integration with AI recommendation service
- * - Company cabin browsing functionality
- * - Session-based authorization
- * - Clean RESTful-style URL handling
+ * Modified for Yash Technology single company usage
+ * - Removed AI service dependencies (causing errors)
+ * - Simplified for single organization operations
+ * - Enhanced dashboard with booking statistics
  */
 @WebServlet(name = "UserController", urlPatterns = {"/dashboard", "/profile", "/company/*"})
 public class UserController extends HttpServlet {
@@ -36,23 +32,23 @@ public class UserController extends HttpServlet {
     private UserService userService;
     private CompanyService companyService;
     private BookingService bookingService;
-    private AIRecommendationService aiService;
+    // ✅ REMOVED: AIRecommendationService (causing errors)
     private CabinDao cabinDAO;
+
     @Override
     public void init() throws ServletException {
         this.userService = new UserServiceImpl();
         this.companyService = new CompanyServiceImpl();
         this.bookingService = new BookingServiceImpl();
-        this.aiService = new AIRecommendationServiceImpl();
+        // ✅ REMOVED: this.aiService = new AIRecommendationServiceImpl();
         this.cabinDAO = new CabinDaoImpl();
-        System.out.println("🔧 UserController initialized successfully");
+        System.out.println("🔧 UserController initialized for Yash Technology (Single Company)");
     }
 
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
 
-        // Check authentication
         User currentUser = getCurrentUser(request);
         if (currentUser == null) {
             System.out.println("🔒 Unauthorized access attempt, redirecting to login");
@@ -83,7 +79,6 @@ public class UserController extends HttpServlet {
     protected void doPost(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
 
-        // Check authentication
         User currentUser = getCurrentUser(request);
         if (currentUser == null) {
             response.sendRedirect(request.getContextPath() + "/login");
@@ -103,32 +98,45 @@ public class UserController extends HttpServlet {
         }
     }
 
+    // ✅ UPDATED: Single company dashboard
     private void showDashboard(HttpServletRequest request, HttpServletResponse response, User user)
             throws ServletException, IOException {
         System.out.println("🏠 Loading dashboard for user: " + user.getName());
 
         try {
-            // Get user's default company
-            Company userCompany = companyService.getCompanyById(user.getDefaultCompanyId());
+            // ✅ SINGLE COMPANY: Get company configuration instead of by ID
+            Company userCompany = companyService.getCompanyConfig();
             if (userCompany == null) {
-                System.err.println("❌ User's default company not found: " + user.getDefaultCompanyId());
-                userCompany = companyService.getAllActiveCompanies().get(0); // Fallback to first company
+                System.err.println("❌ Company configuration not found, creating default");
+                userCompany = createDefaultCompany();
             }
 
-            // Get accessible cabins for the user
-            List<Cabin> accessibleCabins = cabinDAO.getAccessibleCabins(userCompany.getCompanyId(), user);
+            // ✅ SINGLE COMPANY: Get accessible cabins without company parameter
+            List<Cabin> accessibleCabins = cabinDAO.getAccessibleCabins(user);
 
-            // Get AI recommendations
-            List<Cabin> recommendedCabins = aiService.getRecommendedCabinsForUser(user, userCompany.getCompanyId());
+            // ✅ SIMPLIFIED: Get recommended cabins (VIP cabins for normal users)
+            List<Cabin> recommendedCabins = getRecommendedCabins(user);
 
             // Get user's recent bookings
             List<Booking> userBookings = bookingService.getUserBookings(user.getUserId());
             List<Booking> recentBookings = userBookings.stream()
                     .limit(5)
-                    .collect(java.util.stream.Collectors.toList());
+                    .collect(Collectors.toList());
 
-            // Get popular time slots
-            List<String> popularTimeSlots = aiService.getPopularTimeSlots();
+            // ✅ SIMPLIFIED: Get popular time slots without AI
+            List<String> popularTimeSlots = bookingService.getPopularTimeSlots();
+
+            // Calculate basic user statistics
+            long pendingBookings = userBookings.stream()
+                    .filter(booking -> booking.getStatus() == Booking.Status.PENDING)
+                    .count();
+
+            long approvedBookings = userBookings.stream()
+                    .filter(booking -> booking.getStatus() == Booking.Status.APPROVED)
+                    .count();
+
+            // ✅ SIMPLIFIED: Basic booking score calculation
+            double bookingScore = calculateBasicBookingScore(userBookings);
 
             // Set attributes for JSP
             request.setAttribute("user", user);
@@ -138,15 +146,15 @@ public class UserController extends HttpServlet {
             request.setAttribute("recentBookings", recentBookings);
             request.setAttribute("popularTimeSlots", popularTimeSlots);
             request.setAttribute("totalBookings", userBookings.size());
-
-            // Calculate user booking score for display
-            double bookingScore = aiService.calculateUserBookingScore(user);
+            request.setAttribute("pendingBookings", (int) pendingBookings);
+            request.setAttribute("approvedBookings", (int) approvedBookings);
             request.setAttribute("bookingScore", Math.round(bookingScore));
 
             System.out.println("✅ Dashboard data loaded successfully");
             System.out.println("   - Accessible cabins: " + accessibleCabins.size());
-            System.out.println("   - AI recommendations: " + recommendedCabins.size());
+            System.out.println("   - Recommended cabins: " + recommendedCabins.size());
             System.out.println("   - Recent bookings: " + recentBookings.size());
+            System.out.println("   - User booking score: " + Math.round(bookingScore));
 
             request.getRequestDispatcher("/user/dashboard.jsp").forward(request, response);
 
@@ -158,25 +166,33 @@ public class UserController extends HttpServlet {
         }
     }
 
+    // ✅ UPDATED: Single company profile
     private void showProfile(HttpServletRequest request, HttpServletResponse response, User user)
             throws ServletException, IOException {
         System.out.println("👤 Loading profile for user: " + user.getName());
 
         try {
-            // Get all companies for company selection
-            List<Company> allCompanies = companyService.getAllActiveCompanies();
-
-            // Get user's current company
-            Company currentCompany = companyService.getCompanyById(user.getDefaultCompanyId());
+            // ✅ SINGLE COMPANY: Get company configuration
+            Company currentCompany = companyService.getCompanyConfig();
+            if (currentCompany == null) {
+                currentCompany = createDefaultCompany();
+            }
 
             // Get user statistics
             int totalBookings = userService.getUserBookingCount(user.getUserId());
 
+            // Get user's booking history for better profile display
+            List<Booking> userBookings = bookingService.getUserBookings(user.getUserId());
+
+            long approvedBookings = userBookings.stream()
+                    .filter(booking -> booking.getStatus() == Booking.Status.APPROVED)
+                    .count();
+
             // Set attributes
             request.setAttribute("user", user);
-            request.setAttribute("allCompanies", allCompanies);
             request.setAttribute("currentCompany", currentCompany);
             request.setAttribute("totalBookings", totalBookings);
+            request.setAttribute("approvedBookings", (int) approvedBookings);
 
             System.out.println("✅ Profile data loaded for user: " + user.getName());
 
@@ -184,18 +200,19 @@ public class UserController extends HttpServlet {
 
         } catch (Exception e) {
             System.err.println("❌ Error loading profile: " + e.getMessage());
+            e.printStackTrace();
             request.setAttribute("error", "Error loading profile. Please try again.");
             request.getRequestDispatcher("/common/error.jsp").forward(request, response);
         }
     }
 
+    // ✅ UPDATED: Single company profile update
     private void updateProfile(HttpServletRequest request, HttpServletResponse response, User user)
             throws ServletException, IOException {
         System.out.println("✏️ Updating profile for user: " + user.getName());
 
         String name = request.getParameter("name");
         String email = request.getParameter("email");
-        String companyIdStr = request.getParameter("companyId");
         String currentPassword = request.getParameter("currentPassword");
         String newPassword = request.getParameter("newPassword");
         String confirmPassword = request.getParameter("confirmPassword");
@@ -221,31 +238,26 @@ public class UserController extends HttpServlet {
                 }
             }
 
-            // Update company if changed
-            if (companyIdStr != null && !companyIdStr.trim().isEmpty()) {
-                try {
-                    int companyId = Integer.parseInt(companyIdStr);
-                    if (companyId != user.getDefaultCompanyId()) {
-                        user.setDefaultCompanyId(companyId);
-                        System.out.println("🏢 Company updated to: " + companyId);
-                    }
-                } catch (NumberFormatException e) {
-                    System.err.println("❌ Invalid company ID: " + companyIdStr);
-                }
-            }
+            // ✅ SINGLE COMPANY: Ensure user belongs to default company
+            user.setDefaultCompanyId(1); // Always set to Yash Technology
 
             // Update password if provided
             if (currentPassword != null && !currentPassword.isEmpty() &&
                     newPassword != null && !newPassword.isEmpty()) {
 
                 if (newPassword.equals(confirmPassword)) {
-                    boolean passwordChanged = userService.changePassword(
-                            user.getUserId(), currentPassword, newPassword);
+                    if (newPassword.length() >= 6) {
+                        boolean passwordChanged = userService.changePassword(
+                                user.getUserId(), currentPassword, newPassword);
 
-                    if (passwordChanged) {
-                        System.out.println("🔑 Password updated successfully");
+                        if (passwordChanged) {
+                            System.out.println("🔑 Password updated successfully");
+                        } else {
+                            errorMessage = "Current password is incorrect";
+                            updateSuccess = false;
+                        }
                     } else {
-                        errorMessage = "Current password is incorrect";
+                        errorMessage = "New password must be at least 6 characters";
                         updateSuccess = false;
                     }
                 } else {
@@ -262,6 +274,7 @@ public class UserController extends HttpServlet {
                     HttpSession session = request.getSession();
                     session.setAttribute("user", user);
                     session.setAttribute("userName", user.getName());
+                    session.setAttribute("userEmail", user.getEmail());
 
                     System.out.println("✅ Profile updated successfully for: " + user.getName());
                     request.setAttribute("successMessage", "Profile updated successfully!");
@@ -286,54 +299,29 @@ public class UserController extends HttpServlet {
         }
     }
 
+    // ✅ UPDATED: Single company browsing (simplified)
     private void handleCompanyBrowsing(HttpServletRequest request, HttpServletResponse response, User user)
             throws ServletException, IOException {
         System.out.println("🏢 Handling company browsing for user: " + user.getName());
 
-        String pathInfo = request.getPathInfo();
-
         try {
-            if (pathInfo == null || pathInfo.equals("/") || pathInfo.equals("/browse")) {
-                // Show all companies
-                List<Company> allCompanies = companyService.getAllActiveCompanies();
-
-                request.setAttribute("user", user);
-                request.setAttribute("companies", allCompanies);
-
-                System.out.println("📋 Loaded " + allCompanies.size() + " companies for browsing");
-
-                request.getRequestDispatcher("/user/companies.jsp").forward(request, response);
-
-            } else {
-                // Show specific company cabins
-                String companyIdStr = pathInfo.substring(1); // Remove leading slash
-
-                try {
-                    int companyId = Integer.parseInt(companyIdStr);
-                    Company company = companyService.getCompanyById(companyId);
-
-                    if (company != null) {
-                        List<Cabin> companyCabins = cabinDAO.getAccessibleCabins(companyId, user);
-                        List<Cabin> recommendedCabins = aiService.getRecommendedCabinsForUser(user, companyId);
-
-                        request.setAttribute("user", user);
-                        request.setAttribute("company", company);
-                        request.setAttribute("cabins", companyCabins);
-                        request.setAttribute("recommendedCabins", recommendedCabins);
-
-                        System.out.println("🏠 Loaded " + companyCabins.size() + " cabins for company: " + company.getName());
-
-                        request.getRequestDispatcher("/user/company-cabins.jsp").forward(request, response);
-                    } else {
-                        System.err.println("❌ Company not found: " + companyId);
-                        response.sendError(HttpServletResponse.SC_NOT_FOUND, "Company not found");
-                    }
-
-                } catch (NumberFormatException e) {
-                    System.err.println("❌ Invalid company ID: " + companyIdStr);
-                    response.sendError(HttpServletResponse.SC_BAD_REQUEST, "Invalid company ID");
-                }
+            // ✅ SINGLE COMPANY: Always show Yash Technology cabins
+            Company company = companyService.getCompanyConfig();
+            if (company == null) {
+                company = createDefaultCompany();
             }
+
+            List<Cabin> companyCabins = cabinDAO.getAccessibleCabins(user);
+            List<Cabin> recommendedCabins = getRecommendedCabins(user);
+
+            request.setAttribute("user", user);
+            request.setAttribute("company", company);
+            request.setAttribute("cabins", companyCabins);
+            request.setAttribute("recommendedCabins", recommendedCabins);
+
+            System.out.println("🏠 Loaded " + companyCabins.size() + " cabins for " + company.getName());
+
+            request.getRequestDispatcher("/user/company-cabins.jsp").forward(request, response);
 
         } catch (Exception e) {
             System.err.println("❌ Error handling company browsing: " + e.getMessage());
@@ -343,7 +331,9 @@ public class UserController extends HttpServlet {
         }
     }
 
+    // ================================
     // UTILITY METHODS
+    // ================================
 
     private User getCurrentUser(HttpServletRequest request) {
         HttpSession session = request.getSession(false);
@@ -368,5 +358,50 @@ public class UserController extends HttpServlet {
         }
 
         return action.isEmpty() ? "dashboard" : action;
+    }
+
+    // ✅ NEW: Create default company for fallback
+    private Company createDefaultCompany() {
+        Company defaultCompany = new Company();
+        defaultCompany.setCompanyId(1);
+        defaultCompany.setName("Yash Technology");
+        defaultCompany.setLocation("Indore");
+        defaultCompany.setContactInfo("contact@yashtech.com");
+        return defaultCompany;
+    }
+
+    // ✅ NEW: Get recommended cabins without AI service
+    private List<Cabin> getRecommendedCabins(User user) {
+        try {
+            if (user.isVIP() || user.isAdmin()) {
+                // VIP and admin users get VIP cabins as recommendations
+                return cabinDAO.getVIPOnlyCabins().stream()
+                        .limit(3)
+                        .collect(Collectors.toList());
+            } else {
+                // Normal users get high-capacity cabins as recommendations
+                return cabinDAO.getAllActiveCabins().stream()
+                        .filter(cabin -> cabin.getCapacity() >= 6)
+                        .limit(3)
+                        .collect(Collectors.toList());
+            }
+        } catch (Exception e) {
+            System.err.println("❌ Error getting recommended cabins: " + e.getMessage());
+            return new java.util.ArrayList<>();
+        }
+    }
+
+    // ✅ NEW: Calculate basic booking score without AI
+    private double calculateBasicBookingScore(List<Booking> userBookings) {
+        if (userBookings.isEmpty()) {
+            return 0.0;
+        }
+
+        long approvedBookings = userBookings.stream()
+                .filter(booking -> booking.getStatus() == Booking.Status.APPROVED)
+                .count();
+
+        double approvalRate = (double) approvedBookings / userBookings.size();
+        return Math.min(100.0, approvalRate * 100.0);
     }
 }

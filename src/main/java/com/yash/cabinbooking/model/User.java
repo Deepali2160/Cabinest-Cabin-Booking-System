@@ -3,19 +3,8 @@ package com.yash.cabinbooking.model;
 import java.sql.Timestamp;
 
 /**
- * USER MODEL CLASS
- *
- * EVALUATION EXPLANATION:
- * - Simple POJO with proper encapsulation
- * - Enum for user types provides type safety
- * - Timestamp fields for audit trail
- * - toString method for debugging
- *
- * INTERVIEW TALKING POINTS:
- * - "POJO pattern follow kiya hai with private fields"
- * - "Enum use kiya user types ke liye better type safety"
- * - "Constructor overloading for different use cases"
- * - "toString method debugging ke liye helpful hai"
+ * USER MODEL CLASS - SINGLE COMPANY VERSION
+ * Modified for Yash Technology single company usage
  */
 public class User {
 
@@ -27,6 +16,10 @@ public class User {
     public enum Status {
         ACTIVE, INACTIVE
     }
+
+    // ✅ SINGLE COMPANY: Static constants
+    private static final int DEFAULT_COMPANY_ID = 1;
+    private static final String COMPANY_NAME = "Yash Technology";
 
     // Private fields - Proper encapsulation
     private int userId;
@@ -42,7 +35,8 @@ public class User {
     public User() {
         this.userType = UserType.NORMAL;
         this.status = Status.ACTIVE;
-        System.out.println("🆕 New User object created");
+        this.defaultCompanyId = DEFAULT_COMPANY_ID; // ✅ SINGLE COMPANY: Auto-set
+        System.out.println("🆕 New User object created for " + COMPANY_NAME);
     }
 
     // Constructor for Registration
@@ -70,10 +64,20 @@ public class User {
         this.email = email;
         this.password = password;
         this.userType = userType;
-        this.defaultCompanyId = defaultCompanyId;
+        this.defaultCompanyId = defaultCompanyId != 0 ? defaultCompanyId : DEFAULT_COMPANY_ID; // ✅ SINGLE COMPANY: Fallback
         this.status = status;
         this.createdAt = createdAt;
         System.out.println("💾 User loaded from database: " + email);
+    }
+
+    // ✅ NEW: Constructor with UserType (for admin creation)
+    public User(String name, String email, String password, UserType userType) {
+        this();
+        this.name = name;
+        this.email = email;
+        this.password = password;
+        this.userType = userType;
+        System.out.println("👤 User created with type " + userType + ": " + email);
     }
 
     // Getters and Setters
@@ -118,7 +122,7 @@ public class User {
     }
 
     public int getDefaultCompanyId() {
-        return defaultCompanyId;
+        return defaultCompanyId != 0 ? defaultCompanyId : DEFAULT_COMPANY_ID; // ✅ SINGLE COMPANY: Always return valid ID
     }
 
     public void setDefaultCompanyId(int defaultCompanyId) {
@@ -141,7 +145,7 @@ public class User {
         this.createdAt = createdAt;
     }
 
-    // Utility Methods
+    // ✅ SINGLE COMPANY: Enhanced utility methods
     public boolean isVIP() {
         return this.userType == UserType.VIP;
     }
@@ -150,8 +154,16 @@ public class User {
         return this.userType == UserType.ADMIN || this.userType == UserType.SUPER_ADMIN;
     }
 
+    public boolean isSuperAdmin() {
+        return this.userType == UserType.SUPER_ADMIN;
+    }
+
     public boolean isActive() {
         return this.status == Status.ACTIVE;
+    }
+
+    public boolean isNormalUser() {
+        return this.userType == UserType.NORMAL;
     }
 
     public String getUserTypeDisplay() {
@@ -163,6 +175,48 @@ public class User {
         }
     }
 
+    // ✅ NEW: Single company utility methods
+    public String getCompanyName() {
+        return COMPANY_NAME;
+    }
+
+    public boolean belongsToCompany() {
+        return this.defaultCompanyId == DEFAULT_COMPANY_ID;
+    }
+
+    // ✅ NEW: Permission checking methods
+    public boolean canAccessCabin(boolean isVipCabin) {
+        if (isVipCabin) {
+            return this.isVIP() || this.isAdmin();
+        }
+        return true; // All users can access normal cabins
+    }
+
+    public boolean canManageCabins() {
+        return this.isAdmin();
+    }
+
+    public boolean canApproveBookings() {
+        return this.isAdmin();
+    }
+
+    // ✅ NEW: Enum conversion methods for database compatibility
+    public static UserType userTypeFromString(String userType) {
+        try {
+            return UserType.valueOf(userType.toUpperCase());
+        } catch (IllegalArgumentException e) {
+            return UserType.NORMAL; // Default fallback
+        }
+    }
+
+    public static Status statusFromString(String status) {
+        try {
+            return Status.valueOf(status.toUpperCase());
+        } catch (IllegalArgumentException e) {
+            return Status.ACTIVE; // Default fallback
+        }
+    }
+
     @Override
     public String toString() {
         return "User{" +
@@ -170,6 +224,7 @@ public class User {
                 ", name='" + name + '\'' +
                 ", email='" + email + '\'' +
                 ", userType=" + userType +
+                ", company='" + COMPANY_NAME + '\'' +
                 ", defaultCompanyId=" + defaultCompanyId +
                 ", status=" + status +
                 ", createdAt=" + createdAt +

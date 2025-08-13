@@ -16,32 +16,22 @@ import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpSession;
 import java.io.IOException;
 import java.util.List;
+import java.util.stream.Collectors;
 
 /**
- * CABIN CONTROLLER - COMPLETE IMPLEMENTATION
+ * CABIN CONTROLLER - SINGLE COMPANY VERSION
  *
- * HANDLES ALL CABIN-RELATED OPERATIONS:
- * - Add new cabins (Admin only)
- * - Edit existing cabins (Admin only)
- * - Delete cabins (Admin only)
- * - View cabin details (All users)
- * - Cabin management dashboard (Admin only)
- *
- * INTERVIEW TALKING POINTS:
- * - "Complete CRUD operations with proper authorization"
- * - "Service layer integration for business logic"
- * - "Admin-only operations with security checks"
- * - "Form validation and error handling"
- * - "Success/error messaging with session attributes"
+ * Modified for Yash Technology single company usage
+ * - Removed multi-company complexity
+ * - Simplified cabin management
+ * - Single organization focus
+ * - Updated to match new service layer
  */
-@WebServlet(name = "CabinController", urlPatterns = {
-        "/admin/add-cabin",
-        "/admin/manage-cabins",
-        "/admin/cabin/edit",
-        "/admin/cabin/delete",
-        "/admin/cabin/status",
-        "/cabin/details",
-        "/cabin/search"
+@WebServlet(urlPatterns = {
+        "/admin/add-cabin",        // Cabin creation
+        "/admin/manage-cabins",    // Cabin management
+        "/admin/edit-cabin",       // Cabin editing
+        "/admin/delete-cabin"      // Cabin deletion
 })
 public class CabinController extends HttpServlet {
 
@@ -52,7 +42,7 @@ public class CabinController extends HttpServlet {
     public void init() throws ServletException {
         this.cabinService = new CabinServiceImpl();
         this.companyService = new CompanyServiceImpl();
-        System.out.println("🔧 CabinController initialized successfully");
+        System.out.println("🔧 CabinController initialized for Yash Technology (Single Company)");
     }
 
     @Override
@@ -124,11 +114,11 @@ public class CabinController extends HttpServlet {
 
     // ==================== GET REQUEST HANDLERS ====================
 
+    // ✅ UPDATED: Single company add cabin form
     private void showAddCabinForm(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
         System.out.println("📝 Showing add cabin form");
 
-        // Check admin authorization
         User currentUser = getCurrentUser(request);
         if (currentUser == null || !currentUser.isAdmin()) {
             response.sendRedirect(request.getContextPath() + "/login");
@@ -136,12 +126,13 @@ public class CabinController extends HttpServlet {
         }
 
         try {
-            // Get all companies for dropdown
-            List<Company> companies = companyService.getAllActiveCompanies();
-            request.setAttribute("companies", companies);
+            // ✅ SINGLE COMPANY: Get company configuration instead of all companies
+            Company company = companyService.getCompanyConfig();
+
+            request.setAttribute("company", company);
             request.setAttribute("admin", currentUser);
 
-            System.out.println("✅ Add cabin form loaded with " + companies.size() + " companies");
+            System.out.println("✅ Add cabin form loaded for " + (company != null ? company.getName() : "Yash Technology"));
             request.getRequestDispatcher("/admin/add-cabin.jsp").forward(request, response);
 
         } catch (Exception e) {
@@ -151,11 +142,11 @@ public class CabinController extends HttpServlet {
         }
     }
 
+    // ✅ UPDATED: Single company cabin management
     private void showCabinManagement(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
         System.out.println("📋 Showing cabin management dashboard");
 
-        // Check admin authorization
         User currentUser = getCurrentUser(request);
         if (currentUser == null || !currentUser.isAdmin()) {
             response.sendRedirect(request.getContextPath() + "/login");
@@ -163,40 +154,35 @@ public class CabinController extends HttpServlet {
         }
 
         try {
-            // Get filter parameters
-            String companyFilter = request.getParameter("companyId");
+            // ✅ SINGLE COMPANY: No company filtering needed
             String statusFilter = request.getParameter("status");
 
-            List<Cabin> cabins;
-
-            if (companyFilter != null && !companyFilter.isEmpty()) {
-                int companyId = Integer.parseInt(companyFilter);
-                cabins = cabinService.getCabinsByCompany(companyId);
-                System.out.println("📋 Filtered cabins by company: " + companyId);
-            } else {
-                cabins = cabinService.getAllCabinsForAdmin();
-                System.out.println("📋 Retrieved all cabins for admin");
-            }
+            List<Cabin> cabins = cabinService.getAllCabinsForAdmin();
 
             // Filter by status if provided
             if (statusFilter != null && !statusFilter.isEmpty()) {
                 Cabin.Status status = Cabin.Status.valueOf(statusFilter.toUpperCase());
                 cabins = cabins.stream()
                         .filter(cabin -> cabin.getStatus() == status)
-                        .collect(java.util.stream.Collectors.toList());
+                        .collect(Collectors.toList());
                 System.out.println("📋 Filtered cabins by status: " + status);
             }
 
-            // Get companies for filter dropdown
-            List<Company> companies = companyService.getAllActiveCompanies();
+            // ✅ SINGLE COMPANY: Get company config for display
+            Company company = companyService.getCompanyConfig();
 
-            // Set attributes
+            // Cabin statistics
+            int totalCabins = cabins.size();
+            int activeCabins = cabinService.getActiveCabinCount();
+            List<Cabin> vipCabins = cabinService.getVIPCabins();
+
             request.setAttribute("admin", currentUser);
             request.setAttribute("cabins", cabins);
-            request.setAttribute("companies", companies);
-            request.setAttribute("selectedCompanyId", companyFilter);
+            request.setAttribute("company", company);
             request.setAttribute("selectedStatus", statusFilter);
-            request.setAttribute("totalCabins", cabins.size());
+            request.setAttribute("totalCabins", totalCabins);
+            request.setAttribute("activeCabins", activeCabins);
+            request.setAttribute("vipCabins", vipCabins.size());
 
             System.out.println("✅ Cabin management loaded with " + cabins.size() + " cabins");
             request.getRequestDispatcher("/admin/manage-cabins.jsp").forward(request, response);
@@ -208,11 +194,11 @@ public class CabinController extends HttpServlet {
         }
     }
 
+    // ✅ UPDATED: Single company edit cabin form
     private void showEditCabinForm(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
         System.out.println("✏️ Showing edit cabin form");
 
-        // Check admin authorization
         User currentUser = getCurrentUser(request);
         if (currentUser == null || !currentUser.isAdmin()) {
             response.sendRedirect(request.getContextPath() + "/login");
@@ -236,12 +222,12 @@ public class CabinController extends HttpServlet {
                 return;
             }
 
-            // Get companies for dropdown
-            List<Company> companies = companyService.getAllActiveCompanies();
+            // ✅ SINGLE COMPANY: Get company config instead of all companies
+            Company company = companyService.getCompanyConfig();
 
             request.setAttribute("admin", currentUser);
             request.setAttribute("cabin", cabin);
-            request.setAttribute("companies", companies);
+            request.setAttribute("company", company);
 
             System.out.println("✅ Edit form loaded for cabin: " + cabin.getName());
             request.getRequestDispatcher("/admin/edit-cabin.jsp").forward(request, response);
@@ -340,11 +326,11 @@ public class CabinController extends HttpServlet {
 
     // ==================== POST REQUEST HANDLERS ====================
 
+    // ✅ UPDATED: Single company add cabin process
     private void processAddCabin(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
         System.out.println("➕ Processing add cabin request");
 
-        // Check admin authorization
         User currentUser = getCurrentUser(request);
         if (currentUser == null || !currentUser.isAdmin()) {
             response.sendRedirect(request.getContextPath() + "/login");
@@ -352,12 +338,10 @@ public class CabinController extends HttpServlet {
         }
 
         try {
-            // Extract form data
             String name = request.getParameter("name");
             String capacityStr = request.getParameter("capacity");
             String amenities = request.getParameter("amenities");
             String location = request.getParameter("location");
-            String companyIdStr = request.getParameter("companyId");
             String isVipOnlyStr = request.getParameter("isVipOnly");
 
             // Basic validation
@@ -373,25 +357,18 @@ public class CabinController extends HttpServlet {
                 return;
             }
 
-            if (companyIdStr == null || companyIdStr.trim().isEmpty()) {
-                setErrorMessage(request, "Company selection is required");
-                response.sendRedirect(request.getContextPath() + "/admin/add-cabin");
-                return;
-            }
-
             if (location == null || location.trim().isEmpty()) {
                 setErrorMessage(request, "Location is required");
                 response.sendRedirect(request.getContextPath() + "/admin/add-cabin");
                 return;
             }
 
-            // Parse numeric values
+            // Parse values
             int capacity = Integer.parseInt(capacityStr);
-            int companyId = Integer.parseInt(companyIdStr);
-            boolean isVipOnly = "true".equals(isVipOnlyStr);
+            boolean isVipOnly = "true".equals(isVipOnlyStr) || "on".equals(isVipOnlyStr);
 
-            // Create cabin object
-            Cabin cabin = new Cabin(companyId, name.trim(), capacity,
+            // ✅ SINGLE COMPANY: Create cabin without company ID parameter
+            Cabin cabin = new Cabin(name.trim(), capacity,
                     amenities != null ? amenities.trim() : "",
                     isVipOnly, location.trim());
 
@@ -409,7 +386,7 @@ public class CabinController extends HttpServlet {
 
         } catch (NumberFormatException e) {
             System.err.println("❌ Invalid numeric input in add cabin");
-            setErrorMessage(request, "Please enter valid numeric values for capacity and company");
+            setErrorMessage(request, "Please enter valid numeric values for capacity");
             response.sendRedirect(request.getContextPath() + "/admin/add-cabin");
         } catch (Exception e) {
             System.err.println("❌ Error processing add cabin: " + e.getMessage());
@@ -419,11 +396,11 @@ public class CabinController extends HttpServlet {
         }
     }
 
+    // ✅ UPDATED: Single company edit cabin process
     private void processEditCabin(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
         System.out.println("✏️ Processing edit cabin request");
 
-        // Check admin authorization
         User currentUser = getCurrentUser(request);
         if (currentUser == null || !currentUser.isAdmin()) {
             response.sendRedirect(request.getContextPath() + "/login");
@@ -431,19 +408,17 @@ public class CabinController extends HttpServlet {
         }
 
         try {
-            // Extract form data
             String cabinIdStr = request.getParameter("cabinId");
             String name = request.getParameter("name");
             String capacityStr = request.getParameter("capacity");
             String amenities = request.getParameter("amenities");
             String location = request.getParameter("location");
-            String companyIdStr = request.getParameter("companyId");
             String isVipOnlyStr = request.getParameter("isVipOnly");
             String statusStr = request.getParameter("status");
 
             // Basic validation
             if (cabinIdStr == null || name == null || capacityStr == null ||
-                    companyIdStr == null || location == null || statusStr == null) {
+                    location == null || statusStr == null) {
                 setErrorMessage(request, "All required fields must be provided");
                 response.sendRedirect(request.getContextPath() + "/admin/manage-cabins");
                 return;
@@ -452,8 +427,7 @@ public class CabinController extends HttpServlet {
             // Parse values
             int cabinId = Integer.parseInt(cabinIdStr);
             int capacity = Integer.parseInt(capacityStr);
-            int companyId = Integer.parseInt(companyIdStr);
-            boolean isVipOnly = "true".equals(isVipOnlyStr);
+            boolean isVipOnly = "true".equals(isVipOnlyStr) || "on".equals(isVipOnlyStr);
             Cabin.Status status = Cabin.Status.valueOf(statusStr.toUpperCase());
 
             // Get existing cabin
@@ -469,9 +443,9 @@ public class CabinController extends HttpServlet {
             cabin.setCapacity(capacity);
             cabin.setAmenities(amenities != null ? amenities.trim() : "");
             cabin.setLocation(location.trim());
-            cabin.setCompanyId(companyId);
             cabin.setVipOnly(isVipOnly);
             cabin.setStatus(status);
+            // ✅ SINGLE COMPANY: Company ID remains default (1)
 
             // Update cabin using service
             boolean success = cabinService.updateCabin(cabin);
@@ -497,7 +471,6 @@ public class CabinController extends HttpServlet {
             throws ServletException, IOException {
         System.out.println("🗑️ Processing delete cabin request");
 
-        // Check admin authorization
         User currentUser = getCurrentUser(request);
         if (currentUser == null || !currentUser.isAdmin()) {
             response.sendRedirect(request.getContextPath() + "/login");
@@ -518,14 +491,14 @@ public class CabinController extends HttpServlet {
             Cabin cabin = cabinService.getCabinById(cabinId);
             String cabinName = cabin != null ? cabin.getName() : "Cabin #" + cabinId;
 
-            // Delete cabin using service (soft delete)
+            // Delete cabin using service
             boolean success = cabinService.deleteCabin(cabinId);
 
             if (success) {
                 setSuccessMessage(request, "Cabin '" + cabinName + "' deleted successfully!");
                 System.out.println("✅ Cabin deleted successfully: " + cabinName);
             } else {
-                setErrorMessage(request, "Failed to delete cabin. Please try again.");
+                setErrorMessage(request, "Failed to delete cabin. It may have active bookings.");
             }
 
             response.sendRedirect(request.getContextPath() + "/admin/manage-cabins");
@@ -542,7 +515,6 @@ public class CabinController extends HttpServlet {
             throws ServletException, IOException {
         System.out.println("🔄 Processing cabin status update");
 
-        // Check admin authorization
         User currentUser = getCurrentUser(request);
         if (currentUser == null || !currentUser.isAdmin()) {
             response.sendRedirect(request.getContextPath() + "/login");

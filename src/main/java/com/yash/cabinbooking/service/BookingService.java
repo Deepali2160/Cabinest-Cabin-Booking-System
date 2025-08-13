@@ -6,13 +6,8 @@ import java.sql.Date;
 import java.util.List;
 
 /**
- * BOOKING SERVICE INTERFACE
- *
- * EVALUATION EXPLANATION:
- * - Core business logic for cabin booking system
- * - Handles booking validation and conflicts
- * - VIP priority and admin approval workflow
- * - Integration with AI recommendation engine
+ * BOOKING SERVICE INTERFACE - SINGLE COMPANY VERSION
+ * Modified for Yash Technology single company usage
  */
 public interface BookingService {
 
@@ -23,6 +18,10 @@ public interface BookingService {
     List<Booking> getCabinBookings(int cabinId);
     boolean updateBooking(Booking booking);
     boolean cancelBooking(int bookingId, User user);
+
+    // ✅ ADDED: Methods needed for AdminController
+    List<Booking> getAllBookings();
+    List<Booking> getRecentBookings(int limit);
 
     // Admin operations
     List<Booking> getPendingBookingsForApproval();
@@ -51,4 +50,9 @@ public interface BookingService {
     List<Booking> getUserBookingHistory(int userId);
     List<Booking> getBookingsByPurpose(String purpose);
     boolean updateUserPreferencesFromBooking(Booking booking);
+
+    // ✅ ADD THESE TWO METHODS:
+    boolean approveBooking(int bookingId, int adminId);
+    boolean rejectBooking(int bookingId, int adminId);
+    int getBookingCountByUserId(int userId);
 }

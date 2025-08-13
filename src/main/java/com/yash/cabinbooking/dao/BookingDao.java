@@ -5,20 +5,20 @@ import java.sql.Date;
 import java.util.List;
 
 /**
- * BOOKING DAO INTERFACE - FLEXIBLE DURATION SYSTEM
+ * BOOKING DAO INTERFACE - SINGLE COMPANY VERSION
  *
  * EVALUATION EXPLANATION:
- * - Enhanced interface supporting flexible time slot management
- * - Duration-based booking system with 15-minute precision
+ * - Modified for Yash Technology single company usage
+ * - Flexible duration booking system with 15-minute precision
  * - Smart conflict detection and resolution methods
- * - AI-powered recommendations and analytics
- * - Enterprise-level method signatures for scalability
+ * - Simplified for single organization operations
+ * - Aligned with current Booking model class
  *
  * INTERVIEW TALKING POINTS:
- * - "Designed flexible booking interface supporting multiple duration types"
+ * - "Designed single-tenant booking interface for scalability"
  * - "Implemented smart time slot management with conflict resolution"
- * - "Added AI-ready methods for user behavior analysis"
- * - "Created scalable architecture for future booking enhancements"
+ * - "Added essential methods for single company cabin booking"
+ * - "Created clean architecture focused on user-cabin relationships"
  */
 public interface BookingDao {
 
@@ -41,8 +41,8 @@ public interface BookingDao {
     Booking getBookingById(int bookingId);
 
     /**
-     * Get all bookings with pagination support
-     * @return List of all bookings ordered by creation date
+     * Get all bookings ordered by creation date (for AdminController)
+     * @return List of all bookings
      */
     List<Booking> getAllBookings();
 
@@ -91,6 +91,13 @@ public interface BookingDao {
     List<Booking> getApprovedBookings();
 
     /**
+     * Get recent bookings for admin dashboard (needed for AdminController)
+     * @param limit Maximum number of recent bookings to return
+     * @return List of recent bookings
+     */
+    List<Booking> getRecentBookings(int limit);
+
+    /**
      * Get bookings for a specific date
      * @param date Target date
      * @return List of bookings for the date
@@ -122,7 +129,7 @@ public interface BookingDao {
     boolean rejectBooking(int bookingId, int approvedBy);
 
     // ================================
-    // ENHANCED CONFLICT DETECTION
+    // TIME SLOT MANAGEMENT
     // ================================
 
     /**
@@ -142,10 +149,6 @@ public interface BookingDao {
      * @return List of conflicting bookings
      */
     List<Booking> getConflictingBookings(int cabinId, Date date, String timeSlot);
-
-    // ================================
-    // FLEXIBLE DURATION SYSTEM (NEW)
-    // ================================
 
     /**
      * Get available time slots for a specific duration
@@ -180,11 +183,11 @@ public interface BookingDao {
     List<String> generateTimeSlotsForDuration(int durationMinutes);
 
     // ================================
-    // AI & ANALYTICS OPERATIONS
+    // ANALYTICS & REPORTING
     // ================================
 
     /**
-     * Get user's booking history for AI analysis
+     * Get user's booking history for analysis
      * @param userId User identifier
      * @return List of user's past approved bookings
      */
@@ -204,93 +207,45 @@ public interface BookingDao {
     List<Booking> getBookingsByPurpose(String purpose);
 
     // ================================
-    // REPORTING & STATISTICS (NEW)
+    // ADDITIONAL UTILITY METHODS
     // ================================
 
     /**
-     * Get booking statistics for a date range
-     * @param startDate Range start
-     * @param endDate Range end
-     * @return Map containing booking statistics
+     * Get bookings by status for filtering
+     * @param status Booking status (PENDING, APPROVED, REJECTED, CANCELLED)
+     * @return List of bookings with specified status
      */
-    default java.util.Map<String, Integer> getBookingStatistics(Date startDate, Date endDate) {
-        // Default implementation can be overridden
-        return new java.util.HashMap<>();
-    }
+    List<Booking> getBookingsByStatus(String status);
 
     /**
-     * Get cabin utilization data for analytics
+     * Get VIP priority bookings for admin attention
+     * @return List of VIP priority bookings
+     */
+    List<Booking> getVIPBookings();
+
+    /**
+     * Get bookings that require urgent attention
+     * @return List of urgent bookings (pending VIP, conflicts, etc.)
+     */
+    List<Booking> getUrgentBookings();
+
+    /**
+     * Get booking count for a specific user
+     * @param userId User identifier
+     * @return Total number of bookings by user
+     */
+    int getBookingCountByUser(int userId);
+
+    /**
+     * Get booking count for a specific cabin
      * @param cabinId Cabin identifier
-     * @param days Number of days to analyze
-     * @return List of utilization percentages
+     * @return Total number of bookings for cabin
      */
-    default List<Double> getCabinUtilization(int cabinId, int days) {
-        // Default implementation can be overridden
-        return new java.util.ArrayList<>();
-    }
+    int getBookingCountByCabin(int cabinId);
 
     /**
-     * Get peak booking hours for optimization
-     * @param companyId Company identifier
-     * @return Map of hour -> booking count
+     * Get total booking count
+     * @return Total number of bookings in system
      */
-    default java.util.Map<Integer, Integer> getPeakBookingHours(int companyId) {
-        // Default implementation can be overridden
-        return new java.util.HashMap<>();
-    }
-
-    // ================================
-    // ADVANCED SEARCH OPERATIONS (NEW)
-    // ================================
-
-    /**
-     * Search bookings with multiple filters
-     * @param userId User ID (optional, 0 for all users)
-     * @param cabinId Cabin ID (optional, 0 for all cabins)
-     * @param status Booking status (optional, null for all)
-     * @param startDate Date range start (optional)
-     * @param endDate Date range end (optional)
-     * @param purpose Purpose keyword (optional)
-     * @return List of matching bookings
-     */
-    default List<Booking> searchBookings(int userId, int cabinId, String status,
-                                         Date startDate, Date endDate, String purpose) {
-        // Default implementation can be overridden
-        return new java.util.ArrayList<>();
-    }
-
-    /**
-     * Get bookings requiring attention (expired pending, conflicts, etc.)
-     * @return List of bookings needing admin attention
-     */
-    default List<Booking> getBookingsRequiringAttention() {
-        // Default implementation can be overridden
-        return new java.util.ArrayList<>();
-    }
-
-    // ================================
-    // BATCH OPERATIONS (NEW)
-    // ================================
-
-    /**
-     * Bulk approve multiple bookings
-     * @param bookingIds List of booking IDs to approve
-     * @param approvedBy Admin user ID
-     * @return Map of booking ID -> success status
-     */
-    default java.util.Map<Integer, Boolean> bulkApproveBookings(List<Integer> bookingIds, int approvedBy) {
-        // Default implementation can be overridden
-        return new java.util.HashMap<>();
-    }
-
-    /**
-     * Bulk reject multiple bookings
-     * @param bookingIds List of booking IDs to reject
-     * @param approvedBy Admin user ID
-     * @return Map of booking ID -> success status
-     */
-    default java.util.Map<Integer, Boolean> bulkRejectBookings(List<Integer> bookingIds, int approvedBy) {
-        // Default implementation can be overridden
-        return new java.util.HashMap<>();
-    }
+    int getTotalBookingCount();
 }

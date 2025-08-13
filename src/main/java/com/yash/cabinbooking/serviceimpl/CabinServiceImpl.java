@@ -10,19 +10,19 @@ import java.util.ArrayList;
 import java.util.stream.Collectors;
 
 /**
- * CABIN SERVICE IMPLEMENTATION
+ * CABIN SERVICE IMPLEMENTATION - SINGLE COMPANY VERSION
  *
  * EVALUATION EXPLANATION:
- * - Business logic layer with validation
+ * - Business logic layer for single company (Yash Technology)
  * - User access control and VIP management
  * - AI-powered cabin recommendations
- * - Admin operations with proper authorization
+ * - Admin operations without company selection
  *
  * INTERVIEW TALKING POINTS:
- * - "Service layer implements business rules and validation"
+ * - "Single-tenant service layer with business rules"
  * - "VIP access control centralized in service layer"
  * - "AI recommendations for better user experience"
- * - "Proper error handling and logging throughout"
+ * - "Simplified operations for single company"
  */
 public class CabinServiceImpl implements CabinService {
 
@@ -30,7 +30,7 @@ public class CabinServiceImpl implements CabinService {
 
     public CabinServiceImpl() {
         this.cabinDao = new CabinDaoImpl();
-        System.out.println("🔧 CabinService initialized with DAO implementations");
+        System.out.println("🔧 CabinService initialized for Yash Technology (Single Company Mode)");
     }
 
     @Override
@@ -44,9 +44,9 @@ public class CabinServiceImpl implements CabinService {
                 return false;
             }
 
-            // Check for unique cabin name within company
-            if (!isCabinNameUnique(cabin.getName(), cabin.getCompanyId())) {
-                System.err.println("❌ Cabin name already exists in company: " + cabin.getName());
+            // Check for unique cabin name (no company filter needed)
+            if (!isCabinNameUnique(cabin.getName())) {
+                System.err.println("❌ Cabin name already exists: " + cabin.getName());
                 return false;
             }
 
@@ -54,6 +54,9 @@ public class CabinServiceImpl implements CabinService {
             if (cabin.getStatus() == null) {
                 cabin.setStatus(Cabin.Status.ACTIVE);
             }
+
+            // Set default company ID
+            cabin.setCompanyId(Cabin.getDefaultCompanyId());
 
             boolean result = cabinDao.createCabin(cabin);
 
@@ -90,6 +93,9 @@ public class CabinServiceImpl implements CabinService {
                 return false;
             }
 
+            // Ensure company ID remains default
+            cabin.setCompanyId(Cabin.getDefaultCompanyId());
+
             boolean result = cabinDao.updateCabin(cabin);
 
             if (result) {
@@ -119,7 +125,6 @@ public class CabinServiceImpl implements CabinService {
                 return false;
             }
 
-            // Soft delete - mark as inactive
             boolean result = cabinDao.deleteCabin(cabinId);
 
             if (result) {
@@ -175,28 +180,13 @@ public class CabinServiceImpl implements CabinService {
         }
     }
 
+    // ✅ UPDATED: Available cabins for user without company ID
     @Override
-    public List<Cabin> getCabinsByCompany(int companyId) {
-        System.out.println("🏢 Getting cabins for company: " + companyId);
-
-        try {
-            List<Cabin> cabins = cabinDao.getCabinsByCompany(companyId);
-            System.out.println("✅ Retrieved " + cabins.size() + " cabins for company: " + companyId);
-            return cabins;
-
-        } catch (Exception e) {
-            System.err.println("❌ Error in getCabinsByCompany service: " + e.getMessage());
-            e.printStackTrace();
-            return new ArrayList<>();
-        }
-    }
-
-    @Override
-    public List<Cabin> getAvailableCabinsForUser(int companyId, User user) {
+    public List<Cabin> getAvailableCabinsForUser(User user) {
         System.out.println("👤 Getting accessible cabins for user: " + user.getName() + " (Type: " + user.getUserType() + ")");
 
         try {
-            List<Cabin> cabins = cabinDao.getAccessibleCabins(companyId, user);
+            List<Cabin> cabins = cabinDao.getAccessibleCabins(user);
             System.out.println("✅ Retrieved " + cabins.size() + " accessible cabins for user: " + user.getName());
             return cabins;
 
@@ -207,17 +197,35 @@ public class CabinServiceImpl implements CabinService {
         }
     }
 
+    // ✅ UPDATED: VIP cabins without company ID
     @Override
-    public List<Cabin> getVIPCabins(int companyId) {
-        System.out.println("⭐ Getting VIP cabins for company: " + companyId);
+    public List<Cabin> getVIPCabins() {
+        System.out.println("⭐ Getting VIP cabins");
 
         try {
-            List<Cabin> cabins = cabinDao.getVIPOnlyCabins(companyId);
+            List<Cabin> cabins = cabinDao.getVIPOnlyCabins();
             System.out.println("✅ Retrieved " + cabins.size() + " VIP cabins");
             return cabins;
 
         } catch (Exception e) {
             System.err.println("❌ Error in getVIPCabins service: " + e.getMessage());
+            e.printStackTrace();
+            return new ArrayList<>();
+        }
+    }
+
+    // ✅ NEW: Get active cabins
+    @Override
+    public List<Cabin> getActiveCabins() {
+        System.out.println("📋 Getting active cabins");
+
+        try {
+            List<Cabin> cabins = cabinDao.getAllActiveCabins();
+            System.out.println("✅ Retrieved " + cabins.size() + " active cabins");
+            return cabins;
+
+        } catch (Exception e) {
+            System.err.println("❌ Error in getActiveCabins service: " + e.getMessage());
             e.printStackTrace();
             return new ArrayList<>();
         }
@@ -244,14 +252,7 @@ public class CabinServiceImpl implements CabinService {
         System.out.println("🔄 Updating cabin status: " + cabinId + " to " + status);
 
         try {
-            Cabin cabin = cabinDao.getCabinById(cabinId);
-            if (cabin == null) {
-                System.err.println("❌ Cabin not found for status update: " + cabinId);
-                return false;
-            }
-
-            cabin.setStatus(status);
-            boolean result = cabinDao.updateCabin(cabin);
+            boolean result = cabinDao.updateCabinStatus(cabinId, status);
 
             if (result) {
                 System.out.println("✅ Cabin status updated successfully: " + cabinId + " to " + status);
@@ -285,14 +286,15 @@ public class CabinServiceImpl implements CabinService {
         }
     }
 
+    // ✅ UPDATED: Active cabin count without company ID
     @Override
-    public int getActiveCabinCount(int companyId) {
-        System.out.println("📊 Getting active cabin count for company: " + companyId);
+    public int getActiveCabinCount() {
+        System.out.println("📊 Getting active cabin count");
 
         try {
-            List<Cabin> cabins = cabinDao.getAvailableCabins(companyId);
+            List<Cabin> cabins = cabinDao.getAvailableCabins();
             int count = cabins.size();
-            System.out.println("✅ Active cabin count for company " + companyId + ": " + count);
+            System.out.println("✅ Active cabin count: " + count);
             return count;
 
         } catch (Exception e) {
@@ -356,12 +358,13 @@ public class CabinServiceImpl implements CabinService {
         }
     }
 
+    // ✅ UPDATED: Popular cabins without company ID
     @Override
-    public List<Cabin> getPopularCabins(int companyId) {
-        System.out.println("🌟 Getting popular cabins for company: " + companyId);
+    public List<Cabin> getPopularCabins() {
+        System.out.println("🌟 Getting popular cabins");
 
         try {
-            List<Cabin> cabins = cabinDao.getPopularCabins(companyId);
+            List<Cabin> cabins = cabinDao.getPopularCabins();
             System.out.println("✅ Retrieved " + cabins.size() + " popular cabins");
             return cabins;
 
@@ -372,16 +375,17 @@ public class CabinServiceImpl implements CabinService {
         }
     }
 
+    // ✅ UPDATED: Recommended cabins without company ID
     @Override
-    public List<Cabin> getRecommendedCabins(User user, int companyId) {
+    public List<Cabin> getRecommendedCabins(User user) {
         System.out.println("🤖 Getting AI recommendations for user: " + user.getName());
 
         try {
             // Get accessible cabins for user
-            List<Cabin> accessibleCabins = cabinDao.getAccessibleCabins(companyId, user);
+            List<Cabin> accessibleCabins = cabinDao.getAccessibleCabins(user);
 
             // AI logic: Prioritize popular cabins that user can access
-            List<Cabin> popularCabins = cabinDao.getPopularCabins(companyId);
+            List<Cabin> popularCabins = cabinDao.getPopularCabins();
 
             // Filter popular cabins that are accessible to user
             List<Cabin> recommendations = popularCabins.stream()
@@ -446,11 +450,6 @@ public class CabinServiceImpl implements CabinService {
                 return false;
             }
 
-            if (cabin.getCompanyId() <= 0) {
-                System.err.println("❌ Valid company ID is required");
-                return false;
-            }
-
             if (cabin.getLocation() == null || cabin.getLocation().trim().isEmpty()) {
                 System.err.println("❌ Cabin location is required");
                 return false;
@@ -466,14 +465,15 @@ public class CabinServiceImpl implements CabinService {
         }
     }
 
+    // ✅ UPDATED: Cabin name uniqueness without company filter
     @Override
-    public boolean isCabinNameUnique(String name, int companyId) {
-        System.out.println("🔍 Checking cabin name uniqueness: " + name + " in company: " + companyId);
+    public boolean isCabinNameUnique(String name) {
+        System.out.println("🔍 Checking cabin name uniqueness: " + name);
 
         try {
-            List<Cabin> companyCabins = cabinDao.getCabinsByCompany(companyId);
+            List<Cabin> allCabins = cabinDao.getAllCabins();
 
-            boolean isUnique = companyCabins.stream()
+            boolean isUnique = allCabins.stream()
                     .noneMatch(cabin -> cabin.getName().equalsIgnoreCase(name.trim()));
 
             if (isUnique) {

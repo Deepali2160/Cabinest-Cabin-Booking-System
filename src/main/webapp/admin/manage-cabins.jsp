@@ -6,327 +6,403 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Manage Cabins - Admin Panel</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-    <link href="${pageContext.request.contextPath}/css/style.css" rel="stylesheet">
+    <title>Manage Cabins - Yash Technology Admin</title>
+    <link href="${pageContext.request.contextPath}/css/common.css" rel="stylesheet">
+    <link href="${pageContext.request.contextPath}/css/admin-manage-cabins.css" rel="stylesheet">
 </head>
 <body>
     <!-- Admin Navigation -->
-    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
-        <div class="container">
-            <a class="navbar-brand" href="${pageContext.request.contextPath}/admin/dashboard">
-                <i class="fas fa-cogs"></i> Admin Panel
-            </a>
-            <div class="navbar-nav ms-auto">
-                <span class="navbar-text text-light me-3">
-                    <i class="fas fa-user-shield"></i> ${admin.name}
-                </span>
-                <a class="nav-link" href="${pageContext.request.contextPath}/admin/dashboard">
-                    <i class="fas fa-tachometer-alt"></i> Dashboard
+    <nav class="admin-nav">
+        <div class="nav-container">
+            <div class="nav-brand">
+                <h2>🔧 Yash Technology Admin</h2>
+                <span>Cabin Management</span>
+            </div>
+
+            <div class="nav-menu">
+                <a href="${pageContext.request.contextPath}/admin/dashboard" class="nav-link">
+                    📊 Dashboard
                 </a>
+                <a href="${pageContext.request.contextPath}/admin/bookings" class="nav-link">
+                    📅 Manage Bookings
+                </a>
+                <a href="${pageContext.request.contextPath}/admin/manage-cabins" class="nav-link active">
+                    🏠 Manage Cabins
+                </a>
+                <a href="${pageContext.request.contextPath}/admin/users" class="nav-link">
+                    👥 User Management
+                </a>
+            </div>
+
+            <div class="nav-user">
+                <div class="admin-info">
+                    <span class="admin-name">${admin.name}</span>
+                    <c:choose>
+                        <c:when test="${admin.userType == 'SUPER_ADMIN'}">
+                            <span class="role-badge super-admin">👑 Super Admin</span>
+                        </c:when>
+                        <c:otherwise>
+                            <span class="role-badge admin">👨‍💼 Admin</span>
+                        </c:otherwise>
+                    </c:choose>
+                </div>
+                <div class="user-dropdown">
+                    <button class="dropdown-btn" id="userDropdown">⚙️</button>
+                    <div class="dropdown-menu" id="userDropdownMenu">
+                        <a href="${pageContext.request.contextPath}/dashboard">👤 User Dashboard</a>
+                        <a href="${pageContext.request.contextPath}/logout">🚪 Logout</a>
+                    </div>
+                </div>
             </div>
         </div>
     </nav>
 
-    <div class="container-fluid mt-4">
+    <!-- Main Content -->
+    <main class="admin-main">
+
         <!-- Page Header -->
-        <div class="row mb-4">
-            <div class="col-12">
-                <div class="d-flex justify-content-between align-items-center">
-                    <h2><i class="fas fa-home text-primary"></i> Cabin Management</h2>
-                    <a href="${pageContext.request.contextPath}/admin/add-cabin" class="btn btn-primary">
-                        <i class="fas fa-plus"></i> Add New Cabin
+        <section class="page-header">
+            <div class="header-content">
+                <div class="header-info">
+                    <h1>🏠 Cabin Management</h1>
+                    <p>Manage meeting rooms and cabins at Yash Technology - Indore</p>
+                </div>
+
+                <div class="header-actions">
+                    <a href="${pageContext.request.contextPath}/admin/add-cabin" class="action-btn primary">
+                        ➕ Add New Cabin
                     </a>
                 </div>
             </div>
+        </section>
+
+        <!-- Messages -->
+        <div id="message-container">
+            <c:if test="${not empty sessionScope.successMessage}">
+                <div class="message success-message">
+                    ✅ ${sessionScope.successMessage}
+                </div>
+                <c:remove var="successMessage" scope="session"/>
+            </c:if>
+
+            <c:if test="${not empty sessionScope.errorMessage}">
+                <div class="message error-message">
+                    ❌ ${sessionScope.errorMessage}
+                </div>
+                <c:remove var="errorMessage" scope="session"/>
+            </c:if>
         </div>
 
-        <!-- Success/Error Messages -->
-        <c:if test="${not empty sessionScope.successMessage}">
-            <div class="alert alert-success alert-dismissible fade show" role="alert">
-                <i class="fas fa-check-circle"></i> ${sessionScope.successMessage}
-                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-            </div>
-            <c:remove var="successMessage" scope="session"/>
-        </c:if>
-
-        <c:if test="${not empty sessionScope.errorMessage}">
-            <div class="alert alert-danger alert-dismissible fade show" role="alert">
-                <i class="fas fa-exclamation-circle"></i> ${sessionScope.errorMessage}
-                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-            </div>
-            <c:remove var="errorMessage" scope="session"/>
-        </c:if>
-
-        <!-- Filters -->
-        <div class="card mb-4">
-            <div class="card-body">
-                <form method="get" action="${pageContext.request.contextPath}/admin/manage-cabins" class="row g-3">
-                    <div class="col-md-4">
-                        <label for="companyId" class="form-label">Filter by Company</label>
-                        <select name="companyId" id="companyId" class="form-select">
-                            <option value="">All Companies</option>
-                            <c:forEach var="company" items="${companies}">
-                                <option value="${company.companyId}"
-                                        ${selectedCompanyId eq company.companyId ? 'selected' : ''}>
-                                    ${company.name}
-                                </option>
-                            </c:forEach>
-                        </select>
-                    </div>
-                    <div class="col-md-4">
-                        <label for="status" class="form-label">Filter by Status</label>
-                        <select name="status" id="status" class="form-select">
+        <!-- Filters Section -->
+        <section class="filters-section">
+            <div class="filters-card">
+                <form method="get" action="${pageContext.request.contextPath}/admin/manage-cabins" class="filters-form">
+                    <div class="filter-group">
+                        <label for="status">🔍 Filter by Status</label>
+                        <select name="status" id="status" class="filter-select">
                             <option value="">All Status</option>
-                            <option value="ACTIVE" ${selectedStatus eq 'ACTIVE' ? 'selected' : ''}>Active</option>
-                            <option value="MAINTENANCE" ${selectedStatus eq 'MAINTENANCE' ? 'selected' : ''}>Maintenance</option>
-                            <option value="INACTIVE" ${selectedStatus eq 'INACTIVE' ? 'selected' : ''}>Inactive</option>
+                            <option value="ACTIVE" ${selectedStatus eq 'ACTIVE' ? 'selected' : ''}>✅ Active</option>
+                            <option value="MAINTENANCE" ${selectedStatus eq 'MAINTENANCE' ? 'selected' : ''}>🔧 Maintenance</option>
+                            <option value="INACTIVE" ${selectedStatus eq 'INACTIVE' ? 'selected' : ''}>❌ Inactive</option>
                         </select>
                     </div>
-                    <div class="col-md-4 d-flex align-items-end">
-                        <button type="submit" class="btn btn-outline-primary me-2">
-                            <i class="fas fa-filter"></i> Apply Filters
+
+                    <div class="filter-group">
+                        <label for="accessLevel">👥 Filter by Access</label>
+                        <select name="accessLevel" id="accessLevel" class="filter-select">
+                            <option value="">All Access Levels</option>
+                            <option value="ALL" ${selectedAccessLevel eq 'ALL' ? 'selected' : ''}>👤 All Users</option>
+                            <option value="VIP" ${selectedAccessLevel eq 'VIP' ? 'selected' : ''}>⭐ VIP Only</option>
+                        </select>
+                    </div>
+
+                    <div class="filter-actions">
+                        <button type="submit" class="filter-btn apply">
+                            🔍 Apply Filters
                         </button>
-                        <a href="${pageContext.request.contextPath}/admin/manage-cabins" class="btn btn-outline-secondary">
-                            <i class="fas fa-times"></i> Clear
+                        <a href="${pageContext.request.contextPath}/admin/manage-cabins" class="filter-btn clear">
+                            ↩️ Clear Filters
                         </a>
                     </div>
                 </form>
             </div>
-        </div>
+        </section>
 
         <!-- Statistics Cards -->
-        <div class="row mb-4">
-            <div class="col-md-3">
-                <div class="card bg-primary text-white">
-                    <div class="card-body text-center">
-                        <h5>${totalCabins}</h5>
-                        <p class="mb-0">Total Cabins</p>
+        <section class="stats-section">
+            <div class="stats-grid">
+                <div class="stat-card total">
+                    <div class="stat-icon">🏠</div>
+                    <div class="stat-content">
+                        <div class="stat-number">${totalCabins}</div>
+                        <div class="stat-label">Total Cabins</div>
+                    </div>
+                    <div class="stat-trend">
+                        <span class="trend-indicator">📊</span>
                     </div>
                 </div>
-            </div>
-            <div class="col-md-3">
-                <div class="card bg-success text-white">
-                    <div class="card-body text-center">
-                        <h5>${cabins.stream().filter(c -> c.status.name() eq 'ACTIVE').count()}</h5>
-                        <p class="mb-0">Active Cabins</p>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-3">
-                <div class="card bg-warning text-white">
-                    <div class="card-body text-center">
-                        <h5>${cabins.stream().filter(c -> c.vipOnly).count()}</h5>
-                        <p class="mb-0">VIP Cabins</p>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-3">
-                <div class="card bg-info text-white">
-                    <div class="card-body text-center">
-                        <h5>${cabins.stream().filter(c -> c.status.name() eq 'MAINTENANCE').count()}</h5>
-                        <p class="mb-0">Under Maintenance</p>
-                    </div>
-                </div>
-            </div>
-        </div>
 
-        <!-- Cabins Table -->
-        <div class="card">
-            <div class="card-header">
-                <h5 class="mb-0">
-                    <i class="fas fa-list"></i> Cabin List
-                    <span class="badge bg-primary ms-2">${totalCabins} cabins</span>
-                </h5>
+                <div class="stat-card active">
+                    <div class="stat-icon">✅</div>
+                    <div class="stat-content">
+                        <div class="stat-number">${activeCabins}</div>
+                        <div class="stat-label">Active Cabins</div>
+                    </div>
+                    <div class="stat-trend">
+                        <span class="trend-indicator positive">↗️</span>
+                    </div>
+                </div>
+
+                <div class="stat-card vip">
+                    <div class="stat-icon">⭐</div>
+                    <div class="stat-content">
+                        <div class="stat-number">${vipCabins}</div>
+                        <div class="stat-label">VIP Cabins</div>
+                    </div>
+                    <div class="stat-trend">
+                        <span class="trend-indicator">👑</span>
+                    </div>
+                </div>
+
+                <div class="stat-card maintenance">
+                    <div class="stat-icon">🔧</div>
+                    <div class="stat-content">
+                        <div class="stat-number">${maintenanceCabins}</div>
+                        <div class="stat-label">Under Maintenance</div>
+                    </div>
+                    <div class="stat-trend">
+                        <span class="trend-indicator warning">⚠️</span>
+                    </div>
+                </div>
             </div>
-            <div class="card-body">
-                <c:choose>
-                    <c:when test="${empty cabins}">
-                        <div class="text-center py-5">
-                            <i class="fas fa-home fa-3x text-muted mb-3"></i>
-                            <h4 class="text-muted">No Cabins Found</h4>
-                            <p class="text-muted">There are no cabins matching your criteria.</p>
-                            <a href="${pageContext.request.contextPath}/admin/add-cabin" class="btn btn-primary">
-                                <i class="fas fa-plus"></i> Add First Cabin
-                            </a>
-                        </div>
-                    </c:when>
-                    <c:otherwise>
-                        <div class="table-responsive">
-                            <table class="table table-hover">
-                                <thead class="table-dark">
-                                    <tr>
-                                        <th>Cabin Details</th>
-                                        <th>Company</th>
-                                        <th>Capacity</th>
-                                        <th>Status</th>
-                                        <th>Access Level</th>
-                                        <th>Created</th>
-                                        <th>Actions</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
+        </section>
+
+        <!-- Cabins Table Section -->
+        <section class="cabins-section">
+            <div class="cabins-card">
+                <div class="cabins-header">
+                    <h2>📋 Cabin Inventory</h2>
+                    <div class="cabins-count">
+                        <span class="count-badge">${totalCabins} cabins</span>
+                        <span class="company-info">🏢 Yash Technology</span>
+                    </div>
+                </div>
+
+                <div class="cabins-content">
+                    <c:choose>
+                        <c:when test="${empty cabins}">
+                            <div class="empty-state">
+                                <div class="empty-icon">🏠</div>
+                                <h3>No Cabins Found</h3>
+                                <p>There are no cabins matching your criteria at Yash Technology.</p>
+                                <a href="${pageContext.request.contextPath}/admin/add-cabin" class="empty-action">
+                                    ➕ Add First Cabin
+                                </a>
+                            </div>
+                        </c:when>
+                        <c:otherwise>
+                            <div class="cabins-table">
+                                <div class="table-header">
+                                    <div class="header-cell">🏠 Cabin Details</div>
+                                    <div class="header-cell">📏 Capacity</div>
+                                    <div class="header-cell">📊 Status</div>
+                                    <div class="header-cell">🔑 Access Level</div>
+                                    <div class="header-cell">📅 Created</div>
+                                    <div class="header-cell">⚙️ Actions</div>
+                                </div>
+
+                                <div class="table-body">
                                     <c:forEach var="cabin" items="${cabins}">
-                                        <tr>
-                                            <td>
-                                                <div>
-                                                    <strong>${cabin.name}</strong><br>
-                                                    <small class="text-muted">
-                                                        <i class="fas fa-map-marker-alt"></i> ${cabin.location}
-                                                    </small>
+                                        <div class="table-row cabin-row">
+                                            <div class="table-cell cabin-details-cell">
+                                                <div class="cabin-info">
+                                                    <div class="cabin-name">${cabin.name}</div>
+                                                    <div class="cabin-location">
+                                                        📍 ${cabin.location}
+                                                    </div>
                                                     <c:if test="${not empty cabin.amenities}">
-                                                        <br><small class="text-info">
-                                                            <i class="fas fa-star"></i> ${cabin.amenities}
-                                                        </small>
+                                                        <div class="cabin-amenities">
+                                                            🌟 ${cabin.amenities}
+                                                        </div>
                                                     </c:if>
                                                 </div>
-                                            </td>
-                                            <td>
-                                                <c:forEach var="company" items="${companies}">
-                                                    <c:if test="${company.companyId eq cabin.companyId}">
-                                                        ${company.name}
-                                                    </c:if>
-                                                </c:forEach>
-                                            </td>
-                                            <td>
-                                                <span class="badge bg-info">${cabin.capacity} people</span>
-                                            </td>
-                                            <td>
+                                            </div>
+
+                                            <div class="table-cell capacity-cell">
+                                                <div class="capacity-badge">
+                                                    <span class="capacity-number">${cabin.capacity}</span>
+                                                    <span class="capacity-label">people</span>
+                                                </div>
+                                            </div>
+
+                                            <div class="table-cell status-cell">
                                                 <c:choose>
                                                     <c:when test="${cabin.status.name() eq 'ACTIVE'}">
-                                                        <span class="badge bg-success">Active</span>
+                                                        <span class="status-badge active">✅ Active</span>
                                                     </c:when>
                                                     <c:when test="${cabin.status.name() eq 'MAINTENANCE'}">
-                                                        <span class="badge bg-warning">Maintenance</span>
+                                                        <span class="status-badge maintenance">🔧 Maintenance</span>
                                                     </c:when>
                                                     <c:otherwise>
-                                                        <span class="badge bg-secondary">Inactive</span>
+                                                        <span class="status-badge inactive">❌ Inactive</span>
                                                     </c:otherwise>
                                                 </c:choose>
-                                            </td>
-                                            <td>
+                                            </div>
+
+                                            <div class="table-cell access-cell">
                                                 <c:choose>
                                                     <c:when test="${cabin.vipOnly}">
-                                                        <span class="badge bg-warning">
-                                                            <i class="fas fa-crown"></i> VIP Only
-                                                        </span>
+                                                        <span class="access-badge vip">⭐ VIP Only</span>
                                                     </c:when>
                                                     <c:otherwise>
-                                                        <span class="badge bg-secondary">All Users</span>
+                                                        <span class="access-badge all">👤 All Users</span>
                                                     </c:otherwise>
                                                 </c:choose>
-                                            </td>
-                                            <td>
-                                                <c:choose>
-                                                    <c:when test="${not empty cabin.createdAt}">
-                                                        <fmt:formatDate value="${cabin.createdAt}" pattern="MMM dd, yyyy"/>
-                                                    </c:when>
-                                                    <c:otherwise>
-                                                        N/A
-                                                    </c:otherwise>
-                                                </c:choose>
-                                            </td>
-                                            <td>
-                                                <div class="btn-group btn-group-sm" role="group">
-                                                    <a href="${pageContext.request.contextPath}/admin/cabin/edit?cabinId=${cabin.cabinId}"
-                                                       class="btn btn-outline-primary" title="Edit Cabin">
-                                                        <i class="fas fa-edit"></i>
+                                            </div>
+
+                                            <div class="table-cell date-cell">
+                                                <div class="created-date">
+                                                    <c:choose>
+                                                        <c:when test="${not empty cabin.createdAt}">
+                                                            <fmt:formatDate value="${cabin.createdAt}" pattern="MMM dd, yyyy"/>
+                                                        </c:when>
+                                                        <c:otherwise>
+                                                            📅 N/A
+                                                        </c:otherwise>
+                                                    </c:choose>
+                                                </div>
+                                            </div>
+
+                                            <div class="table-cell actions-cell">
+                                                <div class="action-buttons">
+                                                    <a href="${pageContext.request.contextPath}/admin/edit-cabin?cabinId=${cabin.cabinId}"
+                                                       class="action-btn edit" title="Edit Cabin">
+                                                        ✏️ Edit
                                                     </a>
-                                                    <button type="button" class="btn btn-outline-warning dropdown-toggle"
-                                                            data-bs-toggle="dropdown" title="Change Status">
-                                                        <i class="fas fa-cog"></i>
-                                                    </button>
-                                                    <ul class="dropdown-menu">
-                                                        <li><a class="dropdown-item status-change"
-                                                               href="#" data-cabin-id="${cabin.cabinId}" data-status="ACTIVE">
-                                                            <i class="fas fa-check text-success"></i> Set Active
-                                                        </a></li>
-                                                        <li><a class="dropdown-item status-change"
-                                                               href="#" data-cabin-id="${cabin.cabinId}" data-status="MAINTENANCE">
-                                                            <i class="fas fa-tools text-warning"></i> Set Maintenance
-                                                        </a></li>
-                                                        <li><a class="dropdown-item status-change"
-                                                               href="#" data-cabin-id="${cabin.cabinId}" data-status="INACTIVE">
-                                                            <i class="fas fa-ban text-secondary"></i> Set Inactive
-                                                        </a></li>
-                                                    </ul>
-                                                    <button type="button" class="btn btn-outline-danger delete-cabin"
-                                                            data-cabin-id="${cabin.cabinId}" data-cabin-name="${cabin.name}"
+
+                                                    <div class="status-dropdown">
+                                                        <button class="action-btn status" id="statusBtn-${cabin.cabinId}">
+                                                            🔧 Status ▼
+                                                        </button>
+                                                        <div class="dropdown-menu" id="statusMenu-${cabin.cabinId}">
+                                                            <button class="dropdown-item status-change"
+                                                                    data-cabin-id="${cabin.cabinId}"
+                                                                    data-cabin-name="${cabin.name}"
+                                                                    data-status="ACTIVE">
+                                                                ✅ Set Active
+                                                            </button>
+                                                            <button class="dropdown-item status-change"
+                                                                    data-cabin-id="${cabin.cabinId}"
+                                                                    data-cabin-name="${cabin.name}"
+                                                                    data-status="MAINTENANCE">
+                                                                🔧 Set Maintenance
+                                                            </button>
+                                                            <button class="dropdown-item status-change"
+                                                                    data-cabin-id="${cabin.cabinId}"
+                                                                    data-cabin-name="${cabin.name}"
+                                                                    data-status="INACTIVE">
+                                                                ❌ Set Inactive
+                                                            </button>
+                                                        </div>
+                                                    </div>
+
+                                                    <button class="action-btn delete delete-cabin"
+                                                            data-cabin-id="${cabin.cabinId}"
+                                                            data-cabin-name="${cabin.name}"
                                                             title="Delete Cabin">
-                                                        <i class="fas fa-trash"></i>
+                                                        🗑️ Delete
                                                     </button>
                                                 </div>
-                                            </td>
-                                        </tr>
+                                            </div>
+                                        </div>
                                     </c:forEach>
-                                </tbody>
-                            </table>
-                        </div>
-                    </c:otherwise>
-                </c:choose>
+                                </div>
+                            </div>
+                        </c:otherwise>
+                    </c:choose>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Status Change Modal -->
+    <div class="modal-overlay" id="statusModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>🔧 Change Cabin Status</h3>
+                <button class="modal-close" id="statusModalClose">×</button>
+            </div>
+
+            <div class="modal-body">
+                <div class="status-info">
+                    <p>Are you sure you want to change the status of <strong id="statusCabinName"></strong>?</p>
+                    <div class="new-status-display">
+                        New Status: <span id="newStatusDisplay" class="status-preview"></span>
+                    </div>
+                </div>
+
+                <div class="status-warning" id="statusWarning" style="display: none;">
+                    ⚠️ <strong>Warning:</strong> <span id="warningText"></span>
+                </div>
+            </div>
+
+            <div class="modal-footer">
+                <button class="modal-btn secondary" id="cancelStatusChange">
+                    ↩️ Cancel
+                </button>
+                <button class="modal-btn primary" id="confirmStatusChange">
+                    🔧 Change Status
+                </button>
             </div>
         </div>
     </div>
 
-    <!-- Footer -->
-    <footer class="bg-dark text-light text-center py-3 mt-5">
-        <div class="container">
-            <p class="mb-0">&copy; 2024 Cabin Booking System - Admin Panel</p>
-        </div>
-    </footer>
+    <!-- Delete Confirmation Modal -->
+    <div class="modal-overlay" id="deleteModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>🗑️ Delete Cabin</h3>
+                <button class="modal-close" id="deleteModalClose">×</button>
+            </div>
 
-    <!-- Hidden Forms for Actions -->
-    <form id="statusForm" method="post" action="${pageContext.request.contextPath}/admin/cabin/status" style="display: none;">
+            <div class="modal-body">
+                <div class="delete-warning">
+                    ⚠️ <strong>Danger Zone:</strong> This action cannot be undone!
+                </div>
+
+                <div class="delete-info">
+                    <p>Are you sure you want to permanently delete <strong id="deleteCabinName"></strong>?</p>
+                    <p>This will remove all associated data and bookings for this cabin.</p>
+                </div>
+            </div>
+
+            <div class="modal-footer">
+                <button class="modal-btn secondary" id="cancelDelete">
+                    ↩️ Cancel
+                </button>
+                <button class="modal-btn danger" id="confirmDelete">
+                    🗑️ Delete Cabin
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Hidden Forms -->
+    <form id="statusForm" method="post" action="${pageContext.request.contextPath}/admin/update-cabin-status" style="display: none;">
         <input type="hidden" name="cabinId" id="statusCabinId">
         <input type="hidden" name="status" id="statusValue">
     </form>
 
-    <form id="deleteForm" method="post" action="${pageContext.request.contextPath}/admin/cabin/delete" style="display: none;">
+    <form id="deleteForm" method="post" action="${pageContext.request.contextPath}/admin/delete-cabin" style="display: none;">
         <input type="hidden" name="cabinId" id="deleteCabinId">
     </form>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- Footer -->
+    <footer class="admin-footer">
+        <p>&copy; 2024 Yash Technology - Cabin Management System</p>
+    </footer>
 
-    <script>
-        // Status change functionality
-        document.querySelectorAll('.status-change').forEach(button => {
-            button.addEventListener('click', function(e) {
-                e.preventDefault();
-                const cabinId = this.dataset.cabinId;
-                const status = this.dataset.status;
-
-                if (confirm(`Are you sure you want to change the cabin status to ${status}?`)) {
-                    document.getElementById('statusCabinId').value = cabinId;
-                    document.getElementById('statusValue').value = status;
-                    document.getElementById('statusForm').submit();
-                }
-            });
-        });
-
-        // Delete functionality
-        document.querySelectorAll('.delete-cabin').forEach(button => {
-            button.addEventListener('click', function() {
-                const cabinId = this.dataset.cabinId;
-                const cabinName = this.dataset.cabinName;
-
-                if (confirm(`Are you sure you want to delete cabin "${cabinName}"? This action cannot be undone.`)) {
-                    document.getElementById('deleteCabinId').value = cabinId;
-                    document.getElementById('deleteForm').submit();
-                }
-            });
-        });
-
-        // Auto-hide alerts
-        setTimeout(function() {
-            const alerts = document.querySelectorAll('.alert-dismissible');
-            alerts.forEach(alert => {
-                const closeButton = alert.querySelector('.btn-close');
-                if (closeButton) {
-                    closeButton.click();
-                }
-            });
-        }, 5000);
-    </script>
+    <script src="${pageContext.request.contextPath}/js/common.js"></script>
+    <script src="${pageContext.request.contextPath}/js/admin-manage-cabins.js"></script>
 </body>
 </html>

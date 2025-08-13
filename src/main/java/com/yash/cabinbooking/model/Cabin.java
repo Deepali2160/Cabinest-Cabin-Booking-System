@@ -3,19 +3,23 @@ package com.yash.cabinbooking.model;
 import java.sql.Timestamp;
 
 /**
- * CABIN MODEL CLASS
+ * CABIN MODEL CLASS - SINGLE COMPANY VERSION
  *
  * EVALUATION EXPLANATION:
- * - Represents meeting rooms/cabins available for booking
+ * - Represents meeting rooms/cabins for Yash Technology
  * - VIP-only flag for exclusive cabins
  * - Status enum for maintenance tracking
  * - Capacity and amenities for AI recommendations
+ * - Optimized for single company usage
  */
 public class Cabin {
 
     public enum Status {
         ACTIVE, MAINTENANCE, INACTIVE
     }
+
+    // Static constant for single company
+    private static final int DEFAULT_COMPANY_ID = 1;
 
     private int cabinId;
     private int companyId;
@@ -29,16 +33,29 @@ public class Cabin {
 
     // Default Constructor
     public Cabin() {
+        this.companyId = DEFAULT_COMPANY_ID; // ✅ Default to company ID 1
         this.status = Status.ACTIVE;
         this.isVipOnly = false;
-        System.out.println("🏠 New Cabin object created");
+        System.out.println("🏠 New Cabin object created for Yash Technology");
     }
 
-    // Constructor for creating new cabin
+    // ✅ UPDATED: Constructor without companyId (single company)
+    public Cabin(String name, int capacity, String amenities,
+                 boolean isVipOnly, String location) {
+        this();
+        this.name = name;
+        this.capacity = capacity;
+        this.amenities = amenities;
+        this.isVipOnly = isVipOnly;
+        this.location = location;
+        System.out.println("🏠 Cabin created: " + name + " (Capacity: " + capacity + ")");
+    }
+
+    // Legacy constructor (for backward compatibility)
     public Cabin(int companyId, String name, int capacity, String amenities,
                  boolean isVipOnly, String location) {
         this();
-        this.companyId = companyId;
+        this.companyId = DEFAULT_COMPANY_ID; // ✅ Always use default company ID
         this.name = name;
         this.capacity = capacity;
         this.amenities = amenities;
@@ -51,7 +68,7 @@ public class Cabin {
     public Cabin(int cabinId, int companyId, String name, int capacity, String amenities,
                  boolean isVipOnly, String location, Status status, Timestamp createdAt) {
         this.cabinId = cabinId;
-        this.companyId = companyId;
+        this.companyId = companyId; // Keep original from database
         this.name = name;
         this.capacity = capacity;
         this.amenities = amenities;
@@ -161,6 +178,32 @@ public class Cabin {
 
     public String getVipStatusDisplay() {
         return isVipOnly ? "VIP Only" : "All Users";
+    }
+
+    // ✅ NEW: Utility methods for single company
+    public static int getDefaultCompanyId() {
+        return DEFAULT_COMPANY_ID;
+    }
+
+    public boolean belongsToDefaultCompany() {
+        return this.companyId == DEFAULT_COMPANY_ID;
+    }
+
+    public String getDisplayName() {
+        return this.name + " (" + getCapacityRange() + " - " + getVipStatusDisplay() + ")";
+    }
+
+    public String getStatusDisplay() {
+        switch (this.status) {
+            case ACTIVE:
+                return "🟢 Active";
+            case MAINTENANCE:
+                return "🟡 Under Maintenance";
+            case INACTIVE:
+                return "🔴 Inactive";
+            default:
+                return "❓ Unknown";
+        }
     }
 
     @Override

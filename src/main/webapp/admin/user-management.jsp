@@ -6,565 +6,491 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>User Management - Admin Panel</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-    <link href="${pageContext.request.contextPath}/css/style.css" rel="stylesheet">
+    <title>User Management - Yash Technology Admin</title>
+    <link href="${pageContext.request.contextPath}/css/common.css" rel="stylesheet">
+    <link href="${pageContext.request.contextPath}/css/admin-user-management.css" rel="stylesheet">
 </head>
 <body>
     <!-- Admin Navigation -->
-    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
-        <div class="container">
-            <a class="navbar-brand" href="${pageContext.request.contextPath}/admin/dashboard">
-                <i class="fas fa-cogs"></i> Admin Panel
-            </a>
+    <nav class="admin-nav">
+        <div class="nav-container">
+            <div class="nav-brand">
+                <h2>🔧 Yash Technology Admin</h2>
+                <span>User Management</span>
+            </div>
 
-            <div class="navbar-nav ms-auto">
-                <a class="nav-link" href="${pageContext.request.contextPath}/admin/dashboard">
-                    <i class="fas fa-arrow-left"></i> Back to Dashboard
+            <div class="nav-menu">
+                <a href="${pageContext.request.contextPath}/admin/dashboard" class="nav-link">
+                    📊 Dashboard
                 </a>
+                <a href="${pageContext.request.contextPath}/admin/bookings" class="nav-link">
+                    📅 Manage Bookings
+                </a>
+                <a href="${pageContext.request.contextPath}/admin/manage-cabins" class="nav-link">
+                    🏠 Manage Cabins
+                </a>
+                <a href="${pageContext.request.contextPath}/admin/users" class="nav-link active">
+                    👥 User Management
+                </a>
+            </div>
+
+            <div class="nav-user">
+                <div class="admin-info">
+                    <span class="admin-name">${admin.name}</span>
+                    <c:choose>
+                        <c:when test="${admin.userType == 'SUPER_ADMIN'}">
+                            <span class="role-badge super-admin">👑 Super Admin</span>
+                        </c:when>
+                        <c:otherwise>
+                            <span class="role-badge admin">👨‍💼 Admin</span>
+                        </c:otherwise>
+                    </c:choose>
+                </div>
+                <div class="user-dropdown">
+                    <button class="dropdown-btn" id="userDropdown">⚙️</button>
+                    <div class="dropdown-menu" id="userDropdownMenu">
+                        <a href="${pageContext.request.contextPath}/dashboard">👤 User Dashboard</a>
+                        <a href="${pageContext.request.contextPath}/logout">🚪 Logout</a>
+                    </div>
+                </div>
             </div>
         </div>
     </nav>
 
     <!-- Main Content -->
-    <div class="container-fluid mt-4">
+    <main class="admin-main">
 
         <!-- Page Header -->
-        <div class="row mb-4">
-            <div class="col-12">
-                <div class="card dashboard-card">
-                    <div class="card-body">
-                        <div class="row align-items-center">
-                            <div class="col-md-8">
-                                <h2 class="mb-2">
-                                    <i class="fas fa-users"></i> User Management
-                                </h2>
-                                <p class="text-muted mb-0">
-                                    Manage user accounts, permissions, and promote users
-                                </p>
-                            </div>
-                            <div class="col-md-4 text-end">
-                                <div class="btn-group">
-                                    <button type="button" class="btn btn-primary dropdown-toggle" data-bs-toggle="dropdown">
-                                        <i class="fas fa-plus"></i> Quick Actions
-                                    </button>
-                                    <ul class="dropdown-menu">
-                                        <c:if test="${admin.userType == 'SUPER_ADMIN'}">
-                                            <li><a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#promoteModal">
-                                                <i class="fas fa-user-shield"></i> Promote to Admin</a></li>
-                                        </c:if>
-                                        <li><a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#promoteVipModal">
-                                            <i class="fas fa-star"></i> Promote to VIP</a></li>
-                                        <li><hr class="dropdown-divider"></li>
-                                        <li><a class="dropdown-item" href="#" onclick="exportUsers()">
-                                            <i class="fas fa-download"></i> Export Users</a></li>
-                                    </ul>
+        <section class="page-header">
+            <div class="header-content">
+                <div class="header-info">
+                    <h1>👥 User Management</h1>
+                    <p>Manage user accounts, permissions, and roles at Yash Technology - Indore</p>
+                </div>
+
+                <div class="header-actions">
+                    <div class="action-dropdown">
+                        <button class="action-btn primary" id="quickActionsBtn">
+                            ⚡ Quick Actions ▼
+                        </button>
+                        <div class="action-menu" id="quickActionsMenu">
+                            <c:if test="${admin.userType == 'SUPER_ADMIN'}">
+                                <button class="action-item" data-action="promote-admin">
+                                    👨‍💼 Promote to Admin
+                                </button>
+                            </c:if>
+                            <button class="action-item" data-action="promote-vip">
+                                ⭐ Promote to VIP
+                            </button>
+                            <div class="action-divider"></div>
+                            <button class="action-item" data-action="export">
+                                📊 Export Users
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- User Statistics -->
+        <section class="stats-section">
+            <div class="stats-grid">
+                <div class="stat-card total">
+                    <div class="stat-icon">👥</div>
+                    <div class="stat-content">
+                        <div class="stat-number">${totalUsers}</div>
+                        <div class="stat-label">Total Users</div>
+                    </div>
+                </div>
+
+                <div class="stat-card normal">
+                    <div class="stat-icon">👤</div>
+                    <div class="stat-content">
+                        <div class="stat-number">${normalUsers.size()}</div>
+                        <div class="stat-label">Normal Users</div>
+                    </div>
+                </div>
+
+                <div class="stat-card vip">
+                    <div class="stat-icon">⭐</div>
+                    <div class="stat-content">
+                        <div class="stat-number">${vipUsers.size()}</div>
+                        <div class="stat-label">VIP Users</div>
+                    </div>
+                </div>
+
+                <div class="stat-card admin">
+                    <div class="stat-icon">👨‍💼</div>
+                    <div class="stat-content">
+                        <div class="stat-number">${adminUsers.size()}</div>
+                        <div class="stat-label">Administrators</div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- User Management Content -->
+        <section class="users-section">
+            <div class="users-card">
+
+                <!-- Tab Navigation -->
+                <div class="tab-nav">
+                    <button class="tab-btn active" data-tab="all">
+                        📋 All Users (${totalUsers})
+                    </button>
+                    <button class="tab-btn" data-tab="normal">
+                        👤 Normal (${normalUsers.size()})
+                    </button>
+                    <button class="tab-btn" data-tab="vip">
+                        ⭐ VIP (${vipUsers.size()})
+                    </button>
+                    <button class="tab-btn" data-tab="admin">
+                        👨‍💼 Admins (${adminUsers.size()})
+                    </button>
+                </div>
+
+                <!-- Search and Filter -->
+                <div class="search-section">
+                    <div class="search-bar">
+                        <div class="search-input-container">
+                            <span class="search-icon">🔍</span>
+                            <input type="text" id="userSearch" class="search-input"
+                                   placeholder="Search users by name or email...">
+                        </div>
+                    </div>
+                    <div class="search-info">
+                        Showing users from <strong>Yash Technology - Indore</strong>
+                    </div>
+                </div>
+
+                <!-- Tab Content -->
+                <div class="tab-content">
+
+                    <!-- All Users Tab -->
+                    <div class="tab-panel active" id="all-tab">
+                        <c:choose>
+                            <c:when test="${empty allUsers}">
+                                <div class="empty-state">
+                                    <div class="empty-icon">👥</div>
+                                    <h3>No users found</h3>
+                                    <p>There are no registered users in the system.</p>
                                 </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
+                            </c:when>
+                            <c:otherwise>
+                                <div class="users-table">
+                                    <div class="table-header">
+                                        <div class="header-cell">User Details</div>
+                                        <div class="header-cell">User Type</div>
+                                        <div class="header-cell">Bookings</div>
+                                        <div class="header-cell">Status</div>
+                                        <div class="header-cell">Actions</div>
+                                    </div>
 
-        <!-- User Statistics Cards -->
-        <div class="row mb-4">
-            <div class="col-md-3 mb-3">
-                <div class="card dashboard-card border-primary">
-                    <div class="card-body text-center">
-                        <div class="display-6 text-primary mb-2">
-                            <i class="fas fa-users"></i>
-                        </div>
-                        <h4 class="text-primary">${totalUsers}</h4>
-                        <p class="text-muted mb-0">Total Users</p>
-                    </div>
-                </div>
-            </div>
-
-            <div class="col-md-3 mb-3">
-                <div class="card dashboard-card border-secondary">
-                    <div class="card-body text-center">
-                        <div class="display-6 text-secondary mb-2">
-                            <i class="fas fa-user"></i>
-                        </div>
-                        <h4 class="text-secondary">${normalUsers.size()}</h4>
-                        <p class="text-muted mb-0">Normal Users</p>
-                    </div>
-                </div>
-            </div>
-
-            <div class="col-md-3 mb-3">
-                <div class="card dashboard-card border-warning">
-                    <div class="card-body text-center">
-                        <div class="display-6 text-warning mb-2">
-                            <i class="fas fa-star"></i>
-                        </div>
-                        <h4 class="text-warning">${vipUsers.size()}</h4>
-                        <p class="text-muted mb-0">VIP Users</p>
-                    </div>
-                </div>
-            </div>
-
-            <div class="col-md-3 mb-3">
-                <div class="card dashboard-card border-danger">
-                    <div class="card-body text-center">
-                        <div class="display-6 text-danger mb-2">
-                            <i class="fas fa-user-shield"></i>
-                        </div>
-                        <h4 class="text-danger">${adminUsers.size()}</h4>
-                        <p class="text-muted mb-0">Administrators</p>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- User Management Tabs -->
-        <div class="row">
-            <div class="col-12">
-                <div class="card dashboard-card">
-                    <div class="card-header">
-                        <ul class="nav nav-pills card-header-pills" role="tablist">
-                            <li class="nav-item">
-                                <button class="nav-link active" data-bs-toggle="pill" data-bs-target="#all-users" type="button">
-                                    <i class="fas fa-list"></i> All Users (${totalUsers})
-                                </button>
-                            </li>
-                            <li class="nav-item">
-                                <button class="nav-link" data-bs-toggle="pill" data-bs-target="#normal-users" type="button">
-                                    <i class="fas fa-user"></i> Normal (${normalUsers.size()})
-                                </button>
-                            </li>
-                            <li class="nav-item">
-                                <button class="nav-link" data-bs-toggle="pill" data-bs-target="#vip-users" type="button">
-                                    <i class="fas fa-star"></i> VIP (${vipUsers.size()})
-                                </button>
-                            </li>
-                            <li class="nav-item">
-                                <button class="nav-link" data-bs-toggle="pill" data-bs-target="#admin-users" type="button">
-                                    <i class="fas fa-user-shield"></i> Admins (${adminUsers.size()})
-                                </button>
-                            </li>
-                        </ul>
-                    </div>
-
-                    <div class="card-body">
-                        <!-- Search Bar -->
-                        <div class="row mb-3">
-                            <div class="col-md-8">
-                                <div class="input-group">
-                                    <span class="input-group-text">
-                                        <i class="fas fa-search"></i>
-                                    </span>
-                                    <input type="text" class="form-control" id="userSearch"
-                                           placeholder="Search users by name, email, or company...">
-                                </div>
-                            </div>
-                            <div class="col-md-4 text-end">
-                                <select class="form-select" id="companyFilter">
-                                    <option value="">All Companies</option>
-                                    <c:forEach var="company" items="${allCompanies}">
-                                        <option value="${company.companyId}">${company.name}</option>
-                                    </c:forEach>
-                                </select>
-                            </div>
-                        </div>
-
-                        <!-- Tab Content -->
-                        <div class="tab-content">
-
-                            <!-- All Users Tab -->
-                            <div class="tab-pane fade show active" id="all-users">
-                                <div class="table-responsive">
-                                    <table class="table table-hover">
-                                        <thead class="table-light">
-                                            <tr>
-                                                <th>User Details</th>
-                                                <th>Company</th>
-                                                <th>User Type</th>
-                                                <th>Booking Stats</th>
-                                                <th>Status</th>
-                                                <th>Actions</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody id="allUsersTable">
-                                            <c:forEach var="user" items="${allUsers}">
-                                                <tr class="user-row" data-user-name="${user.name}" data-user-email="${user.email}"
-                                                    data-company-id="${user.defaultCompanyId}">
-                                                    <td>
-                                                        <div class="d-flex align-items-center">
-                                                            <i class="fas fa-user-circle fa-2x text-muted me-3"></i>
-                                                            <div>
-                                                                <div class="fw-bold">${user.name}</div>
-                                                                <small class="text-muted">${user.email}</small>
-                                                                <br>
-                                                                <small class="text-muted">ID: ${user.userId}</small>
-                                                            </div>
+                                    <div class="table-body">
+                                        <c:forEach var="user" items="${allUsers}">
+                                            <div class="table-row user-row"
+                                                 data-user-name="${user.name}"
+                                                 data-user-email="${user.email}">
+                                                <div class="table-cell user-cell">
+                                                    <div class="user-info">
+                                                        <div class="user-avatar">👤</div>
+                                                        <div class="user-details">
+                                                            <div class="user-name">${user.name}</div>
+                                                            <div class="user-email">${user.email}</div>
+                                                            <div class="user-id">ID: ${user.userId}</div>
                                                         </div>
-                                                    </td>
-                                                    <td>
-                                                        <c:forEach var="company" items="${allCompanies}">
-                                                            <c:if test="${company.companyId == user.defaultCompanyId}">
-                                                                <div class="fw-bold">${company.name}</div>
-                                                                <small class="text-muted">${company.location}</small>
-                                                            </c:if>
-                                                        </c:forEach>
-                                                    </td>
-                                                    <td>
-                                                        <c:choose>
-                                                            <c:when test="${user.userType == 'SUPER_ADMIN'}">
-                                                                <span class="badge bg-warning text-dark">Super Admin</span>
-                                                            </c:when>
-                                                            <c:when test="${user.userType == 'ADMIN'}">
-                                                                <span class="badge bg-danger">Admin</span>
-                                                            </c:when>
-                                                            <c:when test="${user.userType == 'VIP'}">
-                                                                <span class="badge badge-vip">VIP</span>
-                                                            </c:when>
-                                                            <c:otherwise>
-                                                                <span class="badge bg-primary">Normal</span>
-                                                            </c:otherwise>
-                                                        </c:choose>
-                                                    </td>
-                                                    <td>
-                                                        <div class="text-center">
-                                                            <div class="fw-bold text-primary">
-                                                                ${userBookingCounts[user.userId] != null ? userBookingCounts[user.userId] : 0}
-                                                            </div>
-                                                            <small class="text-muted">Total Bookings</small>
+                                                    </div>
+                                                </div>
+
+                                                <div class="table-cell type-cell">
+                                                    <c:choose>
+                                                        <c:when test="${user.userType == 'SUPER_ADMIN'}">
+                                                            <span class="user-badge super-admin">👑 Super Admin</span>
+                                                        </c:when>
+                                                        <c:when test="${user.userType == 'ADMIN'}">
+                                                            <span class="user-badge admin">👨‍💼 Admin</span>
+                                                        </c:when>
+                                                        <c:when test="${user.userType == 'VIP'}">
+                                                            <span class="user-badge vip">⭐ VIP</span>
+                                                        </c:when>
+                                                        <c:otherwise>
+                                                            <span class="user-badge normal">👤 Normal</span>
+                                                        </c:otherwise>
+                                                    </c:choose>
+                                                </div>
+
+                                                <div class="table-cell bookings-cell">
+                                                    <div class="booking-count">
+                                                        <div class="count-number">
+                                                            ${userBookingCounts[user.userId] != null ? userBookingCounts[user.userId] : 0}
                                                         </div>
-                                                    </td>
-                                                    <td>
-                                                        <c:choose>
-                                                            <c:when test="${user.status == 'ACTIVE'}">
-                                                                <span class="badge bg-success">Active</span>
-                                                            </c:when>
-                                                            <c:otherwise>
-                                                                <span class="badge bg-secondary">Inactive</span>
-                                                            </c:otherwise>
-                                                        </c:choose>
-                                                    </td>
-                                                    <td>
-                                                        <div class="btn-group btn-group-sm">
-                                                            <c:if test="${user.userType == 'NORMAL' && admin.userType == 'SUPER_ADMIN'}">
-                                                                <button class="btn btn-outline-warning promote-vip"
-                                                                        data-user-id="${user.userId}" data-user-name="${user.name}">
-                                                                    <i class="fas fa-star"></i>
-                                                                </button>
-                                                                <button class="btn btn-outline-danger promote-admin"
-                                                                        data-user-id="${user.userId}" data-user-name="${user.name}">
-                                                                    <i class="fas fa-user-shield"></i>
-                                                                </button>
-                                                            </c:if>
+                                                        <div class="count-label">Bookings</div>
+                                                    </div>
+                                                </div>
 
-                                                            <c:if test="${user.userType == 'NORMAL'}">
-                                                                <button class="btn btn-outline-warning promote-vip"
-                                                                        data-user-id="${user.userId}" data-user-name="${user.name}">
-                                                                    <i class="fas fa-star" title="Promote to VIP"></i>
-                                                                </button>
-                                                            </c:if>
+                                                <div class="table-cell status-cell">
+                                                    <c:choose>
+                                                        <c:when test="${user.status == 'ACTIVE'}">
+                                                            <span class="status-badge active">✅ Active</span>
+                                                        </c:when>
+                                                        <c:otherwise>
+                                                            <span class="status-badge inactive">❌ Inactive</span>
+                                                        </c:otherwise>
+                                                    </c:choose>
+                                                </div>
 
-                                                            <button class="btn btn-outline-info view-details"
-                                                                    data-user-id="${user.userId}">
-                                                                <i class="fas fa-eye"></i>
+                                                <div class="table-cell actions-cell">
+                                                    <div class="action-buttons">
+                                                        <c:if test="${user.userType == 'NORMAL'}">
+                                                            <button class="action-btn promote promote-vip"
+                                                                    data-user-id="${user.userId}"
+                                                                    data-user-name="${user.name}"
+                                                                    title="Promote to VIP">
+                                                                ⭐ VIP
                                                             </button>
-                                                        </div>
-                                                    </td>
-                                                </tr>
-                                            </c:forEach>
-                                        </tbody>
-                                    </table>
+                                                        </c:if>
+
+                                                        <c:if test="${user.userType == 'NORMAL' && admin.userType == 'SUPER_ADMIN'}">
+                                                            <button class="action-btn promote promote-admin"
+                                                                    data-user-id="${user.userId}"
+                                                                    data-user-name="${user.name}"
+                                                                    title="Promote to Admin">
+                                                                👨‍💼 Admin
+                                                            </button>
+                                                        </c:if>
+
+                                                        <c:if test="${user.userType == 'VIP' && admin.userType == 'SUPER_ADMIN'}">
+                                                            <button class="action-btn promote promote-admin"
+                                                                    data-user-id="${user.userId}"
+                                                                    data-user-name="${user.name}"
+                                                                    title="Promote to Admin">
+                                                                👨‍💼 Admin
+                                                            </button>
+                                                        </c:if>
+
+                                                        <button class="action-btn view view-details"
+                                                                data-user-id="${user.userId}"
+                                                                title="View Details">
+                                                            👁️ View
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </c:forEach>
+                                    </div>
                                 </div>
-                            </div>
+                            </c:otherwise>
+                        </c:choose>
+                    </div>
 
-                            <!-- Normal Users Tab -->
-                            <div class="tab-pane fade" id="normal-users">
-                                <c:choose>
-                                    <c:when test="${empty normalUsers}">
-                                        <div class="text-center py-4">
-                                            <i class="fas fa-user fa-3x text-muted mb-3"></i>
-                                            <p class="text-muted">No normal users found</p>
-                                        </div>
-                                    </c:when>
-                                    <c:otherwise>
-                                        <div class="row">
-                                            <c:forEach var="user" items="${normalUsers}">
-                                                <div class="col-md-6 col-lg-4 mb-3">
-                                                    <div class="card border-primary">
-                                                        <div class="card-body">
-                                                            <div class="d-flex justify-content-between align-items-start mb-2">
-                                                                <h6 class="card-title mb-0">${user.name}</h6>
-                                                                <span class="badge bg-primary">Normal</span>
-                                                            </div>
-                                                            <p class="card-text small text-muted mb-2">${user.email}</p>
-                                                            <p class="card-text small mb-3">
-                                                                Bookings: <strong>${userBookingCounts[user.userId] != null ? userBookingCounts[user.userId] : 0}</strong>
-                                                            </p>
-                                                            <div class="btn-group w-100">
-                                                                <button class="btn btn-outline-warning btn-sm promote-vip"
-                                                                        data-user-id="${user.userId}" data-user-name="${user.name}">
-                                                                    <i class="fas fa-star"></i> VIP
-                                                                </button>
-                                                                <c:if test="${admin.userType == 'SUPER_ADMIN'}">
-                                                                    <button class="btn btn-outline-danger btn-sm promote-admin"
-                                                                            data-user-id="${user.userId}" data-user-name="${user.name}">
-                                                                        <i class="fas fa-user-shield"></i> Admin
-                                                                    </button>
-                                                                </c:if>
-                                                            </div>
-                                                        </div>
+                    <!-- Normal Users Tab -->
+                    <div class="tab-panel" id="normal-tab">
+                        <c:choose>
+                            <c:when test="${empty normalUsers}">
+                                <div class="empty-state">
+                                    <div class="empty-icon">👤</div>
+                                    <h3>No normal users</h3>
+                                    <p>There are no normal users in the system.</p>
+                                </div>
+                            </c:when>
+                            <c:otherwise>
+                                <div class="user-cards-grid">
+                                    <c:forEach var="user" items="${normalUsers}">
+                                        <div class="user-card normal-card">
+                                            <div class="card-header">
+                                                <div class="user-avatar">👤</div>
+                                                <div class="user-info">
+                                                    <h4>${user.name}</h4>
+                                                    <p>${user.email}</p>
+                                                </div>
+                                                <span class="user-badge normal">👤 Normal</span>
+                                            </div>
+
+                                            <div class="card-body">
+                                                <div class="user-stats">
+                                                    <div class="stat-item">
+                                                        <span class="stat-value">
+                                                            ${userBookingCounts[user.userId] != null ? userBookingCounts[user.userId] : 0}
+                                                        </span>
+                                                        <span class="stat-label">Bookings</span>
+                                                    </div>
+                                                    <div class="stat-item">
+                                                        <span class="stat-value">
+                                                            <c:choose>
+                                                                <c:when test="${user.status == 'ACTIVE'}">✅</c:when>
+                                                                <c:otherwise>❌</c:otherwise>
+                                                            </c:choose>
+                                                        </span>
+                                                        <span class="stat-label">Status</span>
                                                     </div>
                                                 </div>
-                                            </c:forEach>
-                                        </div>
-                                    </c:otherwise>
-                                </c:choose>
-                            </div>
+                                            </div>
 
-                            <!-- VIP Users Tab -->
-                            <div class="tab-pane fade" id="vip-users">
-                                <c:choose>
-                                    <c:when test="${empty vipUsers}">
-                                        <div class="text-center py-4">
-                                            <i class="fas fa-star fa-3x text-warning mb-3"></i>
-                                            <p class="text-muted">No VIP users found</p>
+                                            <div class="card-actions">
+                                                <button class="card-action-btn vip promote-vip"
+                                                        data-user-id="${user.userId}"
+                                                        data-user-name="${user.name}">
+                                                    ⭐ Promote to VIP
+                                                </button>
+                                                <c:if test="${admin.userType == 'SUPER_ADMIN'}">
+                                                    <button class="card-action-btn admin promote-admin"
+                                                            data-user-id="${user.userId}"
+                                                            data-user-name="${user.name}">
+                                                        👨‍💼 Promote to Admin
+                                                    </button>
+                                                </c:if>
+                                            </div>
                                         </div>
-                                    </c:when>
-                                    <c:otherwise>
-                                        <div class="row">
-                                            <c:forEach var="user" items="${vipUsers}">
-                                                <div class="col-md-6 col-lg-4 mb-3">
-                                                    <div class="card border-warning">
-                                                        <div class="card-body">
-                                                            <div class="d-flex justify-content-between align-items-start mb-2">
-                                                                <h6 class="card-title mb-0">${user.name}</h6>
-                                                                <span class="badge badge-vip">VIP</span>
-                                                            </div>
-                                                            <p class="card-text small text-muted mb-2">${user.email}</p>
-                                                            <p class="card-text small mb-3">
-                                                                Bookings: <strong>${userBookingCounts[user.userId] != null ? userBookingCounts[user.userId] : 0}</strong>
-                                                            </p>
-                                                            <c:if test="${admin.userType == 'SUPER_ADMIN'}">
-                                                                <button class="btn btn-outline-danger btn-sm w-100 promote-admin"
-                                                                        data-user-id="${user.userId}" data-user-name="${user.name}">
-                                                                    <i class="fas fa-user-shield"></i> Promote to Admin
-                                                                </button>
-                                                            </c:if>
-                                                        </div>
+                                    </c:forEach>
+                                </div>
+                            </c:otherwise>
+                        </c:choose>
+                    </div>
+
+                    <!-- VIP Users Tab -->
+                    <div class="tab-panel" id="vip-tab">
+                        <c:choose>
+                            <c:when test="${empty vipUsers}">
+                                <div class="empty-state">
+                                    <div class="empty-icon">⭐</div>
+                                    <h3>No VIP users</h3>
+                                    <p>There are no VIP users in the system.</p>
+                                </div>
+                            </c:when>
+                            <c:otherwise>
+                                <div class="user-cards-grid">
+                                    <c:forEach var="user" items="${vipUsers}">
+                                        <div class="user-card vip-card">
+                                            <div class="card-header">
+                                                <div class="user-avatar">👤</div>
+                                                <div class="user-info">
+                                                    <h4>${user.name}</h4>
+                                                    <p>${user.email}</p>
+                                                </div>
+                                                <span class="user-badge vip">⭐ VIP</span>
+                                            </div>
+
+                                            <div class="card-body">
+                                                <div class="user-stats">
+                                                    <div class="stat-item">
+                                                        <span class="stat-value">
+                                                            ${userBookingCounts[user.userId] != null ? userBookingCounts[user.userId] : 0}
+                                                        </span>
+                                                        <span class="stat-label">Bookings</span>
+                                                    </div>
+                                                    <div class="stat-item">
+                                                        <span class="stat-value">🌟</span>
+                                                        <span class="stat-label">Priority</span>
                                                     </div>
                                                 </div>
-                                            </c:forEach>
-                                        </div>
-                                    </c:otherwise>
-                                </c:choose>
-                            </div>
+                                            </div>
 
-                            <!-- Admin Users Tab -->
-                            <div class="tab-pane fade" id="admin-users">
-                                <c:choose>
-                                    <c:when test="${empty adminUsers}">
-                                        <div class="text-center py-4">
-                                            <i class="fas fa-user-shield fa-3x text-danger mb-3"></i>
-                                            <p class="text-muted">No admin users found</p>
+                                            <div class="card-actions">
+                                                <c:if test="${admin.userType == 'SUPER_ADMIN'}">
+                                                    <button class="card-action-btn admin promote-admin"
+                                                            data-user-id="${user.userId}"
+                                                            data-user-name="${user.name}">
+                                                        👨‍💼 Promote to Admin
+                                                    </button>
+                                                </c:if>
+                                            </div>
                                         </div>
-                                    </c:when>
-                                    <c:otherwise>
-                                        <div class="row">
-                                            <c:forEach var="user" items="${adminUsers}">
-                                                <div class="col-md-6 col-lg-4 mb-3">
-                                                    <div class="card border-danger">
-                                                        <div class="card-body">
-                                                            <div class="d-flex justify-content-between align-items-start mb-2">
-                                                                <h6 class="card-title mb-0">${user.name}</h6>
-                                                                <c:choose>
-                                                                    <c:when test="${user.userType == 'SUPER_ADMIN'}">
-                                                                        <span class="badge bg-warning text-dark">Super Admin</span>
-                                                                    </c:when>
-                                                                    <c:otherwise>
-                                                                        <span class="badge bg-danger">Admin</span>
-                                                                    </c:otherwise>
-                                                                </c:choose>
-                                                            </div>
-                                                            <p class="card-text small text-muted mb-2">${user.email}</p>
-                                                            <p class="card-text small mb-0">
-                                                                <i class="fas fa-shield-alt text-success"></i> Administrative Access
-                                                            </p>
-                                                        </div>
+                                    </c:forEach>
+                                </div>
+                            </c:otherwise>
+                        </c:choose>
+                    </div>
+
+                    <!-- Admin Users Tab -->
+                    <div class="tab-panel" id="admin-tab">
+                        <c:choose>
+                            <c:when test="${empty adminUsers}">
+                                <div class="empty-state">
+                                    <div class="empty-icon">👨‍💼</div>
+                                    <h3>No admin users</h3>
+                                    <p>There are no admin users in the system.</p>
+                                </div>
+                            </c:when>
+                            <c:otherwise>
+                                <div class="user-cards-grid">
+                                    <c:forEach var="user" items="${adminUsers}">
+                                        <div class="user-card admin-card">
+                                            <div class="card-header">
+                                                <div class="user-avatar">👤</div>
+                                                <div class="user-info">
+                                                    <h4>${user.name}</h4>
+                                                    <p>${user.email}</p>
+                                                </div>
+                                                <c:choose>
+                                                    <c:when test="${user.userType == 'SUPER_ADMIN'}">
+                                                        <span class="user-badge super-admin">👑 Super Admin</span>
+                                                    </c:when>
+                                                    <c:otherwise>
+                                                        <span class="user-badge admin">👨‍💼 Admin</span>
+                                                    </c:otherwise>
+                                                </c:choose>
+                                            </div>
+
+                                            <div class="card-body">
+                                                <div class="admin-privileges">
+                                                    <div class="privilege-item">
+                                                        🛡️ Administrative Access
+                                                    </div>
+                                                    <div class="privilege-item">
+                                                        📋 Booking Management
+                                                    </div>
+                                                    <div class="privilege-item">
+                                                        👥 User Management
                                                     </div>
                                                 </div>
-                                            </c:forEach>
+                                            </div>
                                         </div>
-                                    </c:otherwise>
-                                </c:choose>
-                            </div>
-                        </div>
+                                    </c:forEach>
+                                </div>
+                            </c:otherwise>
+                        </c:choose>
                     </div>
                 </div>
             </div>
-        </div>
-    </div>
+        </section>
+    </main>
 
-    <!-- Promotion Modals -->
-    <div class="modal fade" id="promotionModal" tabindex="-1">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="promotionModalTitle">Promote User</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+    <!-- Promotion Modal -->
+    <div class="modal-overlay" id="promotionModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="promotionModalTitle">👤 Promote User</h3>
+                <button class="modal-close" id="modalClose">×</button>
+            </div>
+
+            <div class="modal-body">
+                <div class="promotion-warning">
+                    ⚠️ <strong>Important:</strong> User promotions cannot be undone easily. Make sure you want to proceed.
                 </div>
-                <div class="modal-body">
-                    <div class="alert alert-warning">
-                        <i class="fas fa-exclamation-triangle"></i>
-                        <strong>Important:</strong> User promotions cannot be undone easily. Make sure you want to proceed.
-                    </div>
+
+                <div class="promotion-info">
                     <p>Are you sure you want to promote <strong id="promotionUserName"></strong> to <strong id="promotionNewRole"></strong>?</p>
-                    <div class="text-muted small">
-                        <p id="promotionDescription"></p>
-                    </div>
+                    <div class="promotion-description" id="promotionDescription"></div>
                 </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="button" class="btn btn-primary" id="confirmPromotionBtn">Promote User</button>
-                </div>
+            </div>
+
+            <div class="modal-footer">
+                <button class="modal-btn secondary" id="cancelPromotion">
+                    ↩️ Cancel
+                </button>
+                <button class="modal-btn primary" id="confirmPromotion">
+                    🚀 Promote User
+                </button>
             </div>
         </div>
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- Footer -->
+    <footer class="admin-footer">
+        <p>&copy; 2024 Yash Technology - User Management System</p>
+    </footer>
 
-    <script>
-        // Search functionality
-        document.getElementById('userSearch').addEventListener('input', function() {
-            const searchTerm = this.value.toLowerCase();
-            filterUsers();
-        });
-
-        document.getElementById('companyFilter').addEventListener('change', function() {
-            filterUsers();
-        });
-
-        function filterUsers() {
-            const searchTerm = document.getElementById('userSearch').value.toLowerCase();
-            const companyFilter = document.getElementById('companyFilter').value;
-            const rows = document.querySelectorAll('.user-row');
-
-            rows.forEach(row => {
-                const userName = row.dataset.userName.toLowerCase();
-                const userEmail = row.dataset.userEmail.toLowerCase();
-                const companyId = row.dataset.companyId;
-
-                const matchesSearch = userName.includes(searchTerm) || userEmail.includes(searchTerm);
-                const matchesCompany = !companyFilter || companyId === companyFilter;
-
-                if (matchesSearch && matchesCompany) {
-                    row.style.display = '';
-                } else {
-                    row.style.display = 'none';
-                }
-            });
-        }
-
-        // Promotion functionality
-        let promotionUserId = null;
-        let promotionType = null;
-
-        document.querySelectorAll('.promote-vip').forEach(button => {
-            button.addEventListener('click', function() {
-                promotionUserId = this.dataset.userId;
-                const userName = this.dataset.userName;
-
-                showPromotionModal(userName, 'VIP', 'VIP users get priority booking approval and access to VIP-only cabins.', 'VIP');
-            });
-        });
-
-        document.querySelectorAll('.promote-admin').forEach(button => {
-            button.addEventListener('click', function() {
-                promotionUserId = this.dataset.userId;
-                const userName = this.dataset.userName;
-
-                showPromotionModal(userName, 'Administrator', 'Administrators can manage bookings and promote other users.', 'ADMIN');
-            });
-        });
-
-        function showPromotionModal(userName, newRole, description, type) {
-            document.getElementById('promotionUserName').textContent = userName;
-            document.getElementById('promotionNewRole').textContent = newRole;
-            document.getElementById('promotionDescription').textContent = description;
-
-            promotionType = type;
-
-            const modal = new bootstrap.Modal(document.getElementById('promotionModal'));
-            modal.show();
-        }
-
-        document.getElementById('confirmPromotionBtn').addEventListener('click', function() {
-            if (promotionUserId && promotionType) {
-                const form = document.createElement('form');
-                form.method = 'POST';
-                form.action = `${pageContext.request.contextPath}/admin/promote-user`;
-
-                const userIdInput = document.createElement('input');
-                userIdInput.type = 'hidden';
-                userIdInput.name = 'userId';
-                userIdInput.value = promotionUserId;
-
-                const userTypeInput = document.createElement('input');
-                userTypeInput.type = 'hidden';
-                userTypeInput.name = 'userType';
-                userTypeInput.value = promotionType;
-
-                form.appendChild(userIdInput);
-                form.appendChild(userTypeInput);
-
-                document.body.appendChild(form);
-                form.submit();
-            }
-        });
-
-        // Export users functionality
-        function exportUsers() {
-            const csvContent = generateUserCSV();
-            downloadCSV(csvContent, 'users_export.csv');
-        }
-
-        function generateUserCSV() {
-            const users = document.querySelectorAll('.user-row');
-            let csv = 'Name,Email,User Type,Company,Bookings,Status\n';
-
-            users.forEach(row => {
-                const name = row.dataset.userName;
-                const email = row.dataset.userEmail;
-                const userType = row.querySelector('td:nth-child(3) .badge').textContent;
-                const company = row.querySelector('td:nth-child(2) .fw-bold').textContent;
-                const bookings = row.querySelector('td:nth-child(4) .fw-bold').textContent;
-                const status = row.querySelector('td:nth-child(5) .badge').textContent;
-
-                csv += `"${name}","${email}","${userType}","${company}","${bookings}","${status}"\n`;
-            });
-
-            return csv;
-        }
-
-        function downloadCSV(csvContent, fileName) {
-            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-            const link = document.createElement('a');
-
-            if (link.download !== undefined) {
-                const url = URL.createObjectURL(blob);
-                link.setAttribute('href', url);
-                link.setAttribute('download', fileName);
-                link.style.visibility = 'hidden';
-                document.body.appendChild(link);
-                link.click();
-                document.body.removeChild(link);
-            }
-        }
-
-        // Initialize tooltips
-        const tooltips = document.querySelectorAll('[data-bs-toggle="tooltip"]');
-        tooltips.forEach(tooltip => {
-            new bootstrap.Tooltip(tooltip);
-        });
-    </script>
+    <script src="${pageContext.request.contextPath}/js/common.js"></script>
+    <script src="${pageContext.request.contextPath}/js/admin-user-management.js"></script>
 </body>
 </html>

@@ -1,381 +1,347 @@
 <%@ page contentType="text/html;charset=UTF-8" language="java" %>
 <%@ taglib uri="http://java.sun.com/jsp/jstl/core" prefix="c" %>
+<%@ taglib uri="http://java.sun.com/jsp/jstl/fmt" prefix="fmt" %>
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>My Profile - Cabin Booking System</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-    <link href="${pageContext.request.contextPath}/css/style.css" rel="stylesheet">
+    <title>My Profile - Yash Technology</title>
+    <link href="${pageContext.request.contextPath}/css/common.css" rel="stylesheet">
+    <link href="${pageContext.request.contextPath}/css/profile.css" rel="stylesheet">
 </head>
 <body>
-    <!-- Navigation -->
-    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
-        <div class="container">
-            <a class="navbar-brand" href="${pageContext.request.contextPath}/dashboard">
-                <i class="fas fa-building"></i> Cabin Booking System
-            </a>
+    <!-- Header Navigation -->
+    <nav class="profile-nav">
+        <div class="nav-container">
+            <div class="nav-brand">
+                <h2>🏢 Yash Technology</h2>
+                <span>My Profile</span>
+            </div>
 
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
-                <span class="navbar-toggler-icon"></span>
-            </button>
+            <div class="nav-menu">
+                <a href="${pageContext.request.contextPath}/dashboard" class="nav-link">
+                    🏠 Dashboard
+                </a>
+                <a href="${pageContext.request.contextPath}/book" class="nav-link">
+                    📅 New Booking
+                </a>
+                <a href="${pageContext.request.contextPath}/mybookings" class="nav-link">
+                    📋 My Bookings
+                </a>
+                <a href="${pageContext.request.contextPath}/profile" class="nav-link active">
+                    👤 Profile
+                </a>
+            </div>
 
-            <div class="collapse navbar-collapse" id="navbarNav">
-                <ul class="navbar-nav me-auto">
-                    <li class="nav-item">
-                        <a class="nav-link" href="${pageContext.request.contextPath}/dashboard">
-                            <i class="fas fa-tachometer-alt"></i> Dashboard
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="${pageContext.request.contextPath}/mybookings">
-                            <i class="fas fa-calendar-check"></i> My Bookings
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link active" href="${pageContext.request.contextPath}/profile">
-                            <i class="fas fa-user-edit"></i> Profile
-                        </a>
-                    </li>
-                </ul>
-
-                <ul class="navbar-nav">
-                    <li class="nav-item">
-                        <a class="nav-link" href="${pageContext.request.contextPath}/logout">
-                            <i class="fas fa-sign-out-alt"></i> Logout
-                        </a>
-                    </li>
-                </ul>
+            <div class="nav-user">
+                <span class="user-name">${user.name}</span>
+                <c:if test="${user.userType == 'VIP'}">
+                    <span class="vip-badge">⭐ VIP</span>
+                </c:if>
+                <c:if test="${user.admin}">
+                    <span class="admin-badge">👨‍💼 Admin</span>
+                </c:if>
+                <div class="user-dropdown">
+                    <button class="dropdown-btn" id="userDropdown">⚙️</button>
+                    <div class="dropdown-menu" id="dropdownMenu">
+                        <a href="${pageContext.request.contextPath}/logout">🚪 Logout</a>
+                    </div>
+                </div>
             </div>
         </div>
     </nav>
 
     <!-- Main Content -->
-    <div class="container mt-4">
+    <main class="profile-main">
 
         <!-- Page Header -->
-        <div class="row mb-4">
-            <div class="col-12">
-                <div class="card dashboard-card">
-                    <div class="card-body">
-                        <h2 class="mb-2">
-                            <i class="fas fa-user-edit"></i> My Profile
-                        </h2>
-                        <p class="text-muted mb-0">
-                            Manage your account information and preferences
-                        </p>
-                    </div>
-                </div>
+        <section class="profile-header">
+            <div class="header-content">
+                <h1>👤 My Profile</h1>
+                <p>Manage your account information and preferences at Yash Technology</p>
             </div>
+        </section>
+
+        <!-- Messages -->
+        <div id="message-container">
+            <c:if test="${not empty successMessage}">
+                <div class="message success-message">
+                    ✅ ${successMessage}
+                </div>
+            </c:if>
+
+            <c:if test="${not empty error}">
+                <div class="message error-message">
+                    ❌ ${error}
+                </div>
+            </c:if>
         </div>
 
-        <!-- Success/Error Messages -->
-        <c:if test="${not empty successMessage}">
-            <div class="alert alert-success alert-dismissible fade show" role="alert">
-                <i class="fas fa-check-circle"></i> ${successMessage}
-                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-            </div>
-        </c:if>
+        <!-- Profile Content -->
+        <div class="profile-container">
 
-        <c:if test="${not empty error}">
-            <div class="alert alert-danger alert-dismissible fade show" role="alert">
-                <i class="fas fa-exclamation-circle"></i> ${error}
-                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-            </div>
-        </c:if>
-
-        <div class="row">
-            <!-- Profile Form -->
-            <div class="col-md-8">
-                <div class="card dashboard-card">
-                    <div class="card-header">
-                        <h5 class="mb-0">
-                            <i class="fas fa-user"></i> Account Information
-                        </h5>
+            <!-- Profile Form Section -->
+            <div class="profile-form-section">
+                <div class="form-card">
+                    <div class="form-header">
+                        <h2>📝 Account Information</h2>
+                        <p>Update your personal and account details</p>
                     </div>
-                    <div class="card-body">
-                        <form action="${pageContext.request.contextPath}/profile" method="post" id="profileForm">
 
-                            <!-- Basic Information -->
-                            <div class="row mb-4">
-                                <div class="col-12">
-                                    <h6 class="text-muted mb-3">
-                                        <i class="fas fa-info-circle"></i> Basic Information
-                                    </h6>
+                    <form id="profileForm" action="${pageContext.request.contextPath}/profile" method="post" class="profile-form">
+
+                        <!-- Basic Information -->
+                        <div class="form-section">
+                            <h3>👤 Personal Information</h3>
+
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="name">Full Name <span class="required">*</span></label>
+                                    <input type="text" id="name" name="name" value="${user.name}"
+                                           required maxlength="100" class="form-input">
                                 </div>
 
-                                <div class="col-md-6 mb-3">
-                                    <label for="name" class="form-label">Full Name <span class="text-danger">*</span></label>
-                                    <input type="text" class="form-control" id="name" name="name"
-                                           value="${user.name}" required maxlength="100">
-                                </div>
-
-                                <div class="col-md-6 mb-3">
-                                    <label for="email" class="form-label">Email Address <span class="text-danger">*</span></label>
-                                    <input type="email" class="form-control" id="email" name="email"
-                                           value="${user.email}" required>
-                                    <div class="form-text">Used for login and notifications</div>
+                                <div class="form-group">
+                                    <label for="email">Email Address <span class="required">*</span></label>
+                                    <input type="email" id="email" name="email" value="${user.email}"
+                                           required class="form-input">
+                                    <small class="form-help">Used for login and notifications</small>
                                 </div>
                             </div>
+                        </div>
 
-                            <!-- Company Information -->
-                            <div class="row mb-4">
-                                <div class="col-12">
-                                    <h6 class="text-muted mb-3">
-                                        <i class="fas fa-building"></i> Company Information
-                                    </h6>
-                                </div>
+                        <!-- Company Information (Hidden - Single Company) -->
+                        <div class="form-section company-section">
+                            <h3>🏢 Company Information</h3>
 
-                                <div class="col-md-8 mb-3">
-                                    <label for="companyId" class="form-label">Default Company</label>
-                                    <select class="form-select" id="companyId" name="companyId">
-                                        <c:forEach var="company" items="${allCompanies}">
-                                            <option value="${company.companyId}"
-                                                    ${company.companyId == user.defaultCompanyId ? 'selected' : ''}>
-                                                ${company.name} - ${company.location}
-                                            </option>
-                                        </c:forEach>
-                                    </select>
-                                    <div class="form-text">Your primary company for cabin bookings</div>
-                                </div>
-
-                                <div class="col-md-4 mb-3">
-                                    <label class="form-label">Current Status</label>
-                                    <div class="form-control-plaintext">
-                                        <c:choose>
-                                            <c:when test="${user.userType == 'VIP'}">
-                                                <span class="badge badge-vip fs-6">VIP Member</span>
-                                            </c:when>
-                                            <c:when test="${user.admin}">
-                                                <span class="badge bg-danger fs-6">Administrator</span>
-                                            </c:when>
-                                            <c:otherwise>
-                                                <span class="badge bg-primary fs-6">Regular User</span>
-                                            </c:otherwise>
-                                        </c:choose>
+                            <div class="company-display">
+                                <div class="company-info">
+                                    <div class="company-icon">🏢</div>
+                                    <div class="company-details">
+                                        <h4>Yash Technology</h4>
+                                        <p>📍 Indore, Madhya Pradesh</p>
+                                        <p>📞 contact@yashtech.com</p>
                                     </div>
                                 </div>
-                            </div>
-
-                            <!-- Password Change Section -->
-                            <div class="row mb-4">
-                                <div class="col-12">
-                                    <h6 class="text-muted mb-3">
-                                        <i class="fas fa-lock"></i> Change Password (Optional)
-                                    </h6>
-                                </div>
-
-                                <div class="col-md-4 mb-3">
-                                    <label for="currentPassword" class="form-label">Current Password</label>
-                                    <input type="password" class="form-control" id="currentPassword" name="currentPassword">
-                                    <div class="form-text">Leave blank if not changing password</div>
-                                </div>
-
-                                <div class="col-md-4 mb-3">
-                                    <label for="newPassword" class="form-label">New Password</label>
-                                    <input type="password" class="form-control" id="newPassword" name="newPassword" minlength="6">
-                                    <div class="form-text">Minimum 6 characters</div>
-                                </div>
-
-                                <div class="col-md-4 mb-3">
-                                    <label for="confirmPassword" class="form-label">Confirm New Password</label>
-                                    <input type="password" class="form-control" id="confirmPassword" name="confirmPassword">
+                                <div class="user-role">
+                                    <c:choose>
+                                        <c:when test="${user.userType == 'VIP'}">
+                                            <span class="role-badge vip">⭐ VIP Member</span>
+                                        </c:when>
+                                        <c:when test="${user.admin}">
+                                            <span class="role-badge admin">👨‍💼 Administrator</span>
+                                        </c:when>
+                                        <c:otherwise>
+                                            <span class="role-badge normal">👤 Employee</span>
+                                        </c:otherwise>
+                                    </c:choose>
                                 </div>
                             </div>
 
-                            <!-- Submit Buttons -->
-                            <div class="d-grid gap-2 d-md-flex justify-content-md-end">
-                                <a href="${pageContext.request.contextPath}/dashboard" class="btn btn-secondary me-md-2">
-                                    <i class="fas fa-arrow-left"></i> Back to Dashboard
+                            <!-- Hidden input for company ID -->
+                            <input type="hidden" name="companyId" value="1">
+                        </div>
+
+                        <!-- Password Change Section -->
+                        <div class="form-section password-section">
+                            <h3>🔒 Change Password (Optional)</h3>
+                            <p class="section-description">Leave blank if you don't want to change your password</p>
+
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="currentPassword">Current Password</label>
+                                    <input type="password" id="currentPassword" name="currentPassword"
+                                           class="form-input">
+                                    <small class="form-help">Enter your current password</small>
+                                </div>
+                            </div>
+
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="newPassword">New Password</label>
+                                    <input type="password" id="newPassword" name="newPassword"
+                                           minlength="6" class="form-input">
+                                    <small class="form-help">Minimum 6 characters</small>
+                                    <div class="password-strength" id="passwordStrength" style="display: none;">
+                                        <div class="strength-bar" id="strengthBar"></div>
+                                    </div>
+                                </div>
+
+                                <div class="form-group">
+                                    <label for="confirmPassword">Confirm New Password</label>
+                                    <input type="password" id="confirmPassword" name="confirmPassword"
+                                           class="form-input">
+                                    <div class="match-indicator" id="matchIndicator"></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Submit Section -->
+                        <div class="submit-section">
+                            <div class="form-actions">
+                                <a href="${pageContext.request.contextPath}/dashboard" class="btn btn-secondary">
+                                    ← Back to Dashboard
                                 </a>
-                                <button type="submit" class="btn btn-primary" id="updateBtn">
-                                    <i class="fas fa-save"></i> Update Profile
+                                <button type="submit" id="updateBtn" class="btn btn-primary">
+                                    💾 Update Profile
                                 </button>
                             </div>
-                        </form>
-                    </div>
+                            <div class="submit-info">
+                                🔒 Your information is secure and encrypted
+                            </div>
+                        </div>
+                    </form>
                 </div>
             </div>
 
-            <!-- Profile Summary Sidebar -->
-            <div class="col-md-4">
+            <!-- Profile Sidebar -->
+            <aside class="profile-sidebar">
 
                 <!-- Profile Summary -->
-                <div class="card dashboard-card mb-4">
-                    <div class="card-header">
-                        <h6 class="mb-0">
-                            <i class="fas fa-id-card"></i> Profile Summary
-                        </h6>
-                    </div>
-                    <div class="card-body text-center">
-                        <div class="profile-img-placeholder mb-3">
-                            <i class="fas fa-user-circle fa-5x text-muted"></i>
+                <div class="sidebar-card">
+                    <h3>📋 Profile Summary</h3>
+
+                    <div class="profile-summary">
+                        <div class="avatar">
+                            <div class="avatar-placeholder">
+                                👤
+                            </div>
                         </div>
 
-                        <h5>${user.name}</h5>
-                        <p class="text-muted mb-2">${user.email}</p>
+                        <div class="user-info">
+                            <h4>${user.name}</h4>
+                            <p class="user-email">${user.email}</p>
 
-                        <div class="mb-3">
-                            <c:choose>
-                                <c:when test="${user.userType == 'VIP'}">
-                                    <span class="badge badge-vip">VIP Member</span>
-                                </c:when>
-                                <c:when test="${user.admin}">
-                                    <span class="badge bg-danger">Administrator</span>
-                                </c:when>
-                                <c:otherwise>
-                                    <span class="badge bg-primary">Regular User</span>
-                                </c:otherwise>
-                            </c:choose>
-                        </div>
+                            <div class="user-badges">
+                                <c:choose>
+                                    <c:when test="${user.userType == 'VIP'}">
+                                        <span class="user-badge vip">⭐ VIP Member</span>
+                                    </c:when>
+                                    <c:when test="${user.admin}">
+                                        <span class="user-badge admin">👨‍💼 Administrator</span>
+                                    </c:when>
+                                    <c:otherwise>
+                                        <span class="user-badge normal">👤 Employee</span>
+                                    </c:otherwise>
+                                </c:choose>
 
-                        <div class="text-muted small">
-                            <i class="fas fa-building"></i> ${currentCompany.name}<br>
-                            <i class="fas fa-map-marker-alt"></i> ${currentCompany.location}
+                                <c:choose>
+                                    <c:when test="${user.status == 'ACTIVE'}">
+                                        <span class="status-badge active">✅ Active</span>
+                                    </c:when>
+                                    <c:otherwise>
+                                        <span class="status-badge inactive">❌ Inactive</span>
+                                    </c:otherwise>
+                                </c:choose>
+                            </div>
+
+                            <div class="member-since">
+                                📅 Member since:
+                                <c:choose>
+                                    <c:when test="${user.createdAt != null}">
+                                        <fmt:formatDate value="${user.createdAt}" pattern="MMM yyyy"/>
+                                    </c:when>
+                                    <c:otherwise>Recently</c:otherwise>
+                                </c:choose>
+                            </div>
                         </div>
                     </div>
                 </div>
 
                 <!-- Booking Statistics -->
-                <div class="card dashboard-card mb-4">
-                    <div class="card-header">
-                        <h6 class="mb-0">
-                            <i class="fas fa-chart-bar"></i> Your Statistics
-                        </h6>
-                    </div>
-                    <div class="card-body">
-                        <div class="row text-center">
-                            <div class="col-6 mb-3">
-                                <div class="stat-number text-primary">${totalBookings}</div>
-                                <div class="stat-label small">Total Bookings</div>
-                            </div>
-                            <div class="col-6 mb-3">
-                                <div class="stat-number text-success">
-                                    <c:choose>
-                                        <c:when test="${user.status == 'ACTIVE'}">
-                                            <i class="fas fa-check-circle"></i>
-                                        </c:when>
-                                        <c:otherwise>
-                                            <i class="fas fa-times-circle text-danger"></i>
-                                        </c:otherwise>
-                                    </c:choose>
-                                </div>
-                                <div class="stat-label small">Account Status</div>
-                            </div>
+                <div class="sidebar-card">
+                    <h3>📊 Your Statistics</h3>
+
+                    <div class="stats-grid">
+                        <div class="stat-item">
+                            <div class="stat-number">${totalBookings}</div>
+                            <div class="stat-label">Total Bookings</div>
                         </div>
 
-                        <div class="text-center">
-                            <small class="text-muted">
-                                <i class="fas fa-calendar"></i> Member since
+                        <div class="stat-item">
+                            <div class="stat-number">${approvedBookings}</div>
+                            <div class="stat-label">Approved</div>
+                        </div>
+
+                        <div class="stat-item">
+                            <div class="stat-number">
                                 <c:choose>
-                                    <c:when test="${user.createdAt != null}">
-                                        <fmt:formatDate value="${user.createdAt}" pattern="MMM yyyy"/>
+                                    <c:when test="${totalBookings > 0}">
+                                        ${Math.round((approvedBookings * 100.0) / totalBookings)}%
                                     </c:when>
-                                    <c:otherwise>
-                                        Recently
-                                    </c:otherwise>
+                                    <c:otherwise>0%</c:otherwise>
                                 </c:choose>
-                            </small>
+                            </div>
+                            <div class="stat-label">Success Rate</div>
+                        </div>
+
+                        <div class="stat-item">
+                            <div class="stat-number">
+                                <c:choose>
+                                    <c:when test="${user.userType == 'VIP'}">⭐</c:when>
+                                    <c:when test="${user.admin}">👨‍💼</c:when>
+                                    <c:otherwise>👤</c:otherwise>
+                                </c:choose>
+                            </div>
+                            <div class="stat-label">User Type</div>
                         </div>
                     </div>
                 </div>
 
                 <!-- Quick Actions -->
-                <div class="card dashboard-card">
-                    <div class="card-header">
-                        <h6 class="mb-0">
-                            <i class="fas fa-bolt"></i> Quick Actions
-                        </h6>
-                    </div>
-                    <div class="card-body">
-                        <div class="d-grid gap-2">
-                            <a href="${pageContext.request.contextPath}/book" class="btn btn-primary">
-                                <i class="fas fa-calendar-plus"></i> New Booking
+                <div class="sidebar-card">
+                    <h3>⚡ Quick Actions</h3>
+
+                    <div class="quick-actions">
+                        <a href="${pageContext.request.contextPath}/book" class="quick-action-btn primary">
+                            📅 Book Cabin
+                        </a>
+                        <a href="${pageContext.request.contextPath}/mybookings" class="quick-action-btn secondary">
+                            📋 My Bookings
+                        </a>
+                        <a href="${pageContext.request.contextPath}/dashboard" class="quick-action-btn tertiary">
+                            🏠 Dashboard
+                        </a>
+                        <c:if test="${user.admin}">
+                            <a href="${pageContext.request.contextPath}/admin/dashboard" class="quick-action-btn admin">
+                                🔧 Admin Panel
                             </a>
-                            <a href="${pageContext.request.contextPath}/mybookings" class="btn btn-outline-secondary">
-                                <i class="fas fa-list"></i> My Bookings
-                            </a>
-                            <a href="${pageContext.request.contextPath}/company/browse" class="btn btn-outline-info">
-                                <i class="fas fa-search"></i> Browse Cabins
-                            </a>
-                        </div>
+                        </c:if>
                     </div>
                 </div>
-            </div>
+
+                <!-- Account Tips -->
+                <div class="sidebar-card">
+                    <h3>💡 Account Tips</h3>
+
+                    <div class="tips-list">
+                        <div class="tip-item">
+                            🔒 Use a strong password with at least 6 characters
+                        </div>
+                        <div class="tip-item">
+                            📧 Keep your email updated for booking notifications
+                        </div>
+                        <div class="tip-item">
+                            👤 Complete your profile for better experience
+                        </div>
+                        <c:if test="${user.userType == 'VIP'}">
+                            <div class="tip-item vip-tip">
+                                ⭐ VIP members get priority booking approval
+                            </div>
+                        </c:if>
+                    </div>
+                </div>
+            </aside>
         </div>
-    </div>
+    </main>
 
     <!-- Footer -->
-    <footer class="bg-dark text-light text-center py-3 mt-5">
-        <div class="container">
-            <p class="mb-0">&copy; 2024 Cabin Booking System</p>
-        </div>
+    <footer class="profile-footer">
+        <p>&copy; 2024 Yash Technology - Cabin Booking System</p>
     </footer>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
-
-    <script>
-        // Password confirmation validation
-        document.getElementById('confirmPassword').addEventListener('input', function() {
-            const newPassword = document.getElementById('newPassword').value;
-            const confirmPassword = this.value;
-
-            if (newPassword && confirmPassword && newPassword !== confirmPassword) {
-                this.setCustomValidity('Passwords do not match');
-                this.classList.add('is-invalid');
-            } else {
-                this.setCustomValidity('');
-                this.classList.remove('is-invalid');
-            }
-        });
-
-        // Password change validation
-        function validatePasswordFields() {
-            const currentPassword = document.getElementById('currentPassword').value;
-            const newPassword = document.getElementById('newPassword').value;
-            const confirmPassword = document.getElementById('confirmPassword').value;
-
-            if (currentPassword || newPassword || confirmPassword) {
-                if (!currentPassword) {
-                    alert('Please enter your current password to change it.');
-                    return false;
-                }
-                if (!newPassword || newPassword.length < 6) {
-                    alert('New password must be at least 6 characters long.');
-                    return false;
-                }
-                if (newPassword !== confirmPassword) {
-                    alert('New passwords do not match.');
-                    return false;
-                }
-            }
-            return true;
-        }
-
-        // Form submission
-        document.getElementById('profileForm').addEventListener('submit', function(e) {
-            if (!validatePasswordFields()) {
-                e.preventDefault();
-                return;
-            }
-
-            const updateBtn = document.getElementById('updateBtn');
-            updateBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Updating...';
-            updateBtn.disabled = true;
-        });
-
-        // Auto-hide alerts
-        setTimeout(function() {
-            const alerts = document.querySelectorAll('.alert-dismissible');
-            alerts.forEach(alert => {
-                const closeButton = alert.querySelector('.btn-close');
-                if (closeButton) {
-                    closeButton.click();
-                }
-            });
-        }, 5000);
-    </script>
+    <script src="${pageContext.request.contextPath}/js/common.js"></script>
+    <script src="${pageContext.request.contextPath}/js/profile.js"></script>
 </body>
 </html>

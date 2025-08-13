@@ -9,13 +9,18 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * CABIN DAO IMPLEMENTATION - UPDATED FOR ADMIN CONTROLLER COMPATIBILITY
- * ✅ Hard delete for admin cabin deletion
- * ✅ All CRUD operations for AdminController
- * ✅ Status management methods
- * ✅ Enhanced error handling and logging
+ * CABIN DAO IMPLEMENTATION - SINGLE COMPANY VERSION WITH AI SUPPORT
+ *
+ * EVALUATION EXPLANATION:
+ * - Modified for single company (Yash Technology) usage
+ * - Added AI Recommendation Service compatibility methods
+ * - No company_id parameters needed in most methods
+ * - Default company_id = 1 for all cabins
+ * - Simplified for single organization cabin booking
  */
 public class CabinDaoImpl implements CabinDao {
+
+    // ✅ KEEP ALL YOUR EXISTING METHODS AS THEY ARE
 
     @Override
     public boolean createCabin(Cabin cabin) {
@@ -29,7 +34,7 @@ public class CabinDaoImpl implements CabinDao {
             if (conn == null) return false;
 
             pstmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS);
-            pstmt.setInt(1, cabin.getCompanyId());
+            pstmt.setInt(1, 1); // ✅ Default company_id = 1 for single company
             pstmt.setString(2, cabin.getName());
             pstmt.setInt(3, cabin.getCapacity());
             pstmt.setString(4, cabin.getAmenities());
@@ -43,6 +48,7 @@ public class CabinDaoImpl implements CabinDao {
                 ResultSet generatedKeys = pstmt.getGeneratedKeys();
                 if (generatedKeys.next()) {
                     cabin.setCabinId(generatedKeys.getInt(1));
+                    cabin.setCompanyId(1); // Set company_id in cabin object
                 }
                 System.out.println("✅ Cabin created successfully: " + cabin.getName() + " (ID: " + cabin.getCabinId() + ")");
                 return true;
@@ -101,7 +107,7 @@ public class CabinDaoImpl implements CabinDao {
 
     @Override
     public List<Cabin> getAllCabins() {
-        String sql = "SELECT cabin_id, company_id, name, capacity, amenities, is_vip_only, location, status, created_at FROM cabins ORDER BY company_id, name";
+        String sql = "SELECT cabin_id, company_id, name, capacity, amenities, is_vip_only, location, status, created_at FROM cabins ORDER BY name";
 
         List<Cabin> cabins = new ArrayList<>();
         Connection conn = null;
@@ -131,9 +137,10 @@ public class CabinDaoImpl implements CabinDao {
         return cabins;
     }
 
+    // ✅ ADDED: Get all active cabins (fixes CompanyServiceImpl error)
     @Override
-    public List<Cabin> getCabinsByCompany(int companyId) {
-        String sql = "SELECT cabin_id, company_id, name, capacity, amenities, is_vip_only, location, status, created_at FROM cabins WHERE company_id = ? ORDER BY name";
+    public List<Cabin> getAllActiveCabins() {
+        String sql = "SELECT cabin_id, company_id, name, capacity, amenities, is_vip_only, location, status, created_at FROM cabins WHERE status = 'ACTIVE' ORDER BY name";
 
         List<Cabin> cabins = new ArrayList<>();
         Connection conn = null;
@@ -145,17 +152,16 @@ public class CabinDaoImpl implements CabinDao {
             if (conn == null) return cabins;
 
             pstmt = conn.prepareStatement(sql);
-            pstmt.setInt(1, companyId);
             rs = pstmt.executeQuery();
 
             while (rs.next()) {
                 cabins.add(mapResultSetToCabin(rs));
             }
 
-            System.out.println("✅ Retrieved " + cabins.size() + " cabins for company: " + companyId);
+            System.out.println("✅ Retrieved " + cabins.size() + " active cabins");
 
         } catch (SQLException e) {
-            System.err.println("❌ Error getting cabins by company: " + e.getMessage());
+            System.err.println("❌ Error getting active cabins: " + e.getMessage());
             e.printStackTrace();
         } finally {
             DbUtil.closeAllResources(conn, pstmt, rs);
@@ -176,7 +182,7 @@ public class CabinDaoImpl implements CabinDao {
             if (conn == null) return false;
 
             pstmt = conn.prepareStatement(sql);
-            pstmt.setInt(1, cabin.getCompanyId());
+            pstmt.setInt(1, 1); // ✅ Always set company_id = 1
             pstmt.setString(2, cabin.getName());
             pstmt.setInt(3, cabin.getCapacity());
             pstmt.setString(4, cabin.getAmenities());
@@ -202,7 +208,6 @@ public class CabinDaoImpl implements CabinDao {
         return false;
     }
 
-    // ✅ CRITICAL FIX: Hard delete for AdminController (THE MAIN FIX!)
     @Override
     public boolean deleteCabin(int cabinId) {
         Connection conn = null;
@@ -248,7 +253,6 @@ public class CabinDaoImpl implements CabinDao {
             System.err.println("❌ Error deleting cabin: " + e.getMessage());
             e.printStackTrace();
 
-            // Check for foreign key constraint errors
             if (e.getMessage().contains("foreign key constraint") ||
                     e.getMessage().contains("Cannot delete or update a parent row")) {
                 System.err.println("⚠️ Foreign key constraint violation - cabin has related records");
@@ -260,49 +264,10 @@ public class CabinDaoImpl implements CabinDao {
         return false;
     }
 
-    // ✅ NEW: Update cabin status method for AdminController
-    public boolean updateCabinStatus(int cabinId, Cabin.Status status) {
-        String sql = "UPDATE cabins SET status = ? WHERE cabin_id = ?";
-
-        Connection conn = null;
-        PreparedStatement pstmt = null;
-
-        try {
-            conn = DbUtil.getConnection();
-            if (conn == null) return false;
-
-            pstmt = conn.prepareStatement(sql);
-            pstmt.setString(1, status.name());
-            pstmt.setInt(2, cabinId);
-
-            int rowsAffected = pstmt.executeUpdate();
-
-            if (rowsAffected > 0) {
-                System.out.println("✅ Cabin status updated successfully: " + cabinId + " to " + status);
-                return true;
-            } else {
-                System.err.println("❌ No cabin found with ID: " + cabinId);
-                return false;
-            }
-
-        } catch (SQLException e) {
-            System.err.println("❌ Error updating cabin status: " + e.getMessage());
-            e.printStackTrace();
-        } finally {
-            DbUtil.closeAllResources(conn, pstmt, null);
-        }
-
-        return false;
-    }
-
-    // ✅ NEW: Soft delete method (optional - for business logic)
-    public boolean deactivateCabin(int cabinId) {
-        return updateCabinStatus(cabinId, Cabin.Status.INACTIVE);
-    }
-
+    // ✅ UPDATED: Available cabins without company ID parameter
     @Override
-    public List<Cabin> getAvailableCabins(int companyId) {
-        String sql = "SELECT cabin_id, company_id, name, capacity, amenities, is_vip_only, location, status, created_at FROM cabins WHERE company_id = ? AND status = 'ACTIVE' ORDER BY name";
+    public List<Cabin> getAvailableCabins() {
+        String sql = "SELECT cabin_id, company_id, name, capacity, amenities, is_vip_only, location, status, created_at FROM cabins WHERE status = 'ACTIVE' ORDER BY name";
 
         List<Cabin> cabins = new ArrayList<>();
         Connection conn = null;
@@ -314,14 +279,13 @@ public class CabinDaoImpl implements CabinDao {
             if (conn == null) return cabins;
 
             pstmt = conn.prepareStatement(sql);
-            pstmt.setInt(1, companyId);
             rs = pstmt.executeQuery();
 
             while (rs.next()) {
                 cabins.add(mapResultSetToCabin(rs));
             }
 
-            System.out.println("✅ Retrieved " + cabins.size() + " available cabins for company: " + companyId);
+            System.out.println("✅ Retrieved " + cabins.size() + " available cabins");
 
         } catch (SQLException e) {
             System.err.println("❌ Error getting available cabins: " + e.getMessage());
@@ -333,16 +297,17 @@ public class CabinDaoImpl implements CabinDao {
         return cabins;
     }
 
+    // ✅ UPDATED: Accessible cabins without company ID parameter
     @Override
-    public List<Cabin> getAccessibleCabins(int companyId, User user) {
+    public List<Cabin> getAccessibleCabins(User user) {
         String sql;
 
         if (user.isVIP() || user.isAdmin()) {
             // VIP and Admin users can access all cabins
-            sql = "SELECT cabin_id, company_id, name, capacity, amenities, is_vip_only, location, status, created_at FROM cabins WHERE company_id = ? AND status = 'ACTIVE' ORDER BY is_vip_only DESC, name";
+            sql = "SELECT cabin_id, company_id, name, capacity, amenities, is_vip_only, location, status, created_at FROM cabins WHERE status = 'ACTIVE' ORDER BY is_vip_only DESC, name";
         } else {
             // Normal users can only access non-VIP cabins
-            sql = "SELECT cabin_id, company_id, name, capacity, amenities, is_vip_only, location, status, created_at FROM cabins WHERE company_id = ? AND status = 'ACTIVE' AND is_vip_only = FALSE ORDER BY name";
+            sql = "SELECT cabin_id, company_id, name, capacity, amenities, is_vip_only, location, status, created_at FROM cabins WHERE status = 'ACTIVE' AND is_vip_only = FALSE ORDER BY name";
         }
 
         List<Cabin> cabins = new ArrayList<>();
@@ -355,7 +320,6 @@ public class CabinDaoImpl implements CabinDao {
             if (conn == null) return cabins;
 
             pstmt = conn.prepareStatement(sql);
-            pstmt.setInt(1, companyId);
             rs = pstmt.executeQuery();
 
             while (rs.next()) {
@@ -374,9 +338,10 @@ public class CabinDaoImpl implements CabinDao {
         return cabins;
     }
 
+    // ✅ UPDATED: VIP cabins without company ID parameter (fixes CompanyServiceImpl error)
     @Override
-    public List<Cabin> getVIPOnlyCabins(int companyId) {
-        String sql = "SELECT cabin_id, company_id, name, capacity, amenities, is_vip_only, location, status, created_at FROM cabins WHERE company_id = ? AND is_vip_only = TRUE AND status = 'ACTIVE' ORDER BY name";
+    public List<Cabin> getVIPOnlyCabins() {
+        String sql = "SELECT cabin_id, company_id, name, capacity, amenities, is_vip_only, location, status, created_at FROM cabins WHERE is_vip_only = TRUE AND status = 'ACTIVE' ORDER BY name";
 
         List<Cabin> cabins = new ArrayList<>();
         Connection conn = null;
@@ -388,14 +353,13 @@ public class CabinDaoImpl implements CabinDao {
             if (conn == null) return cabins;
 
             pstmt = conn.prepareStatement(sql);
-            pstmt.setInt(1, companyId);
             rs = pstmt.executeQuery();
 
             while (rs.next()) {
                 cabins.add(mapResultSetToCabin(rs));
             }
 
-            System.out.println("✅ Retrieved " + cabins.size() + " VIP-only cabins for company: " + companyId);
+            System.out.println("✅ Retrieved " + cabins.size() + " VIP-only cabins");
 
         } catch (SQLException e) {
             System.err.println("❌ Error getting VIP cabins: " + e.getMessage());
@@ -474,11 +438,12 @@ public class CabinDaoImpl implements CabinDao {
         return cabins;
     }
 
+    // ✅ UPDATED: Popular cabins without company ID parameter
     @Override
-    public List<Cabin> getPopularCabins(int companyId) {
+    public List<Cabin> getPopularCabins() {
         String sql = "SELECT c.cabin_id, c.company_id, c.name, c.capacity, c.amenities, c.is_vip_only, c.location, c.status, c.created_at, COUNT(b.booking_id) as booking_count " +
                 "FROM cabins c LEFT JOIN bookings b ON c.cabin_id = b.cabin_id " +
-                "WHERE c.company_id = ? AND c.status = 'ACTIVE' " +
+                "WHERE c.status = 'ACTIVE' " +
                 "GROUP BY c.cabin_id " +
                 "ORDER BY booking_count DESC, c.name " +
                 "LIMIT 5";
@@ -493,7 +458,6 @@ public class CabinDaoImpl implements CabinDao {
             if (conn == null) return cabins;
 
             pstmt = conn.prepareStatement(sql);
-            pstmt.setInt(1, companyId);
             rs = pstmt.executeQuery();
 
             while (rs.next()) {
@@ -501,7 +465,7 @@ public class CabinDaoImpl implements CabinDao {
                 cabins.add(cabin);
             }
 
-            System.out.println("🌟 Retrieved " + cabins.size() + " popular cabins for company: " + companyId);
+            System.out.println("🌟 Retrieved " + cabins.size() + " popular cabins");
 
         } catch (SQLException e) {
             System.err.println("❌ Error getting popular cabins: " + e.getMessage());
@@ -521,7 +485,7 @@ public class CabinDaoImpl implements CabinDao {
                 "AND c2.status = 'ACTIVE' " +
                 "AND (c2.capacity BETWEEN c1.capacity - 2 AND c1.capacity + 2 " +
                 "     OR c2.is_vip_only = c1.is_vip_only) " +
-                "ORDER BY c2.company_id = c1.company_id DESC, c2.name " +
+                "ORDER BY c2.name " +
                 "LIMIT 3";
 
         List<Cabin> cabins = new ArrayList<>();
@@ -552,6 +516,83 @@ public class CabinDaoImpl implements CabinDao {
         }
 
         return cabins;
+    }
+
+    // ✅ NEW: Update cabin status method for AdminController
+    @Override
+    public boolean updateCabinStatus(int cabinId, Cabin.Status status) {
+        String sql = "UPDATE cabins SET status = ? WHERE cabin_id = ?";
+
+        Connection conn = null;
+        PreparedStatement pstmt = null;
+
+        try {
+            conn = DbUtil.getConnection();
+            if (conn == null) return false;
+
+            pstmt = conn.prepareStatement(sql);
+            pstmt.setString(1, status.name());
+            pstmt.setInt(2, cabinId);
+
+            int rowsAffected = pstmt.executeUpdate();
+
+            if (rowsAffected > 0) {
+                System.out.println("✅ Cabin status updated successfully: " + cabinId + " to " + status);
+                return true;
+            } else {
+                System.err.println("❌ No cabin found with ID: " + cabinId);
+                return false;
+            }
+
+        } catch (SQLException e) {
+            System.err.println("❌ Error updating cabin status: " + e.getMessage());
+            e.printStackTrace();
+        } finally {
+            DbUtil.closeAllResources(conn, pstmt, null);
+        }
+
+        return false;
+    }
+
+    // ✅ NEW: Soft delete method (optional - for business logic)
+    @Override
+    public boolean deactivateCabin(int cabinId) {
+        return updateCabinStatus(cabinId, Cabin.Status.INACTIVE);
+    }
+
+    // ✅ NEW METHODS - FOR AI RECOMMENDATION SERVICE COMPATIBILITY
+
+    /**
+     * Get cabins by company ID - AI Service compatibility
+     * Always returns all cabins since we have single company
+     */
+    @Override
+    public List<Cabin> getCabinsByCompany(int companyId) {
+        System.out.println("🤖 AI Service: Getting cabins for company: " + companyId + " (Single Company Mode)");
+        // For single company, return all active cabins regardless of companyId
+        return getAllActiveCabins();
+    }
+
+    /**
+     * Get accessible cabins with company ID - AI Service compatibility
+     * Company ID is ignored in single company mode
+     */
+    @Override
+    public List<Cabin> getAccessibleCabins(int companyId, User user) {
+        System.out.println("🤖 AI Service: Getting accessible cabins for company: " + companyId + ", user: " + user.getName());
+        // Delegate to existing method - company ID is ignored
+        return getAccessibleCabins(user);
+    }
+
+    /**
+     * Get VIP cabins with company ID - AI Service compatibility
+     * Company ID is ignored in single company mode
+     */
+    @Override
+    public List<Cabin> getVIPOnlyCabins(int companyId) {
+        System.out.println("🤖 AI Service: Getting VIP cabins for company: " + companyId + " (Single Company Mode)");
+        // Delegate to existing method - company ID is ignored
+        return getVIPOnlyCabins();
     }
 
     // PRIVATE UTILITY METHODS

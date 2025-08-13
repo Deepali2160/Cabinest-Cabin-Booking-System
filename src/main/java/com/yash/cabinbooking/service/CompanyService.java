@@ -5,30 +5,26 @@ import com.yash.cabinbooking.model.Cabin;
 import java.util.List;
 
 /**
- * COMPANY SERVICE INTERFACE
- *
- * EVALUATION EXPLANATION:
- * - Multi-company support for enterprise environments
- * - Company-specific cabin management
- * - Business analytics per company
+ * COMPANY SERVICE INTERFACE - SINGLE COMPANY VERSION
+ * Modified for Yash Technology single company usage
  */
 public interface CompanyService {
 
-    // Company management
-    boolean createCompany(Company company);
-    Company getCompanyById(int companyId);
-    Company getCompanyByName(String name);
-    List<Company> getAllActiveCompanies();
-    boolean updateCompany(Company company);
-    boolean activateCompany(int companyId);
-    boolean deactivateCompany(int companyId);
+    // Single company configuration
+    Company getCompanyConfig();
+    boolean updateCompanyConfig(Company company);
 
-    // Company-cabin relationship
-    List<Cabin> getCompanyCabins(int companyId);
-    int getCompanyCabinCount(int companyId);
-    int getCompanyBookingCount(int companyId);
+    // Company status management
+    boolean activateCompany();
+    boolean deactivateCompany();
+    boolean isCompanyActive();
 
-    // Business analytics
-    Company getMostPopularCompany();
-    List<Company> getCompaniesWithVIPCabins();
+    // Company analytics (no company ID needed)
+    List<Cabin> getAllCabins();
+    int getTotalCabinCount();
+    int getTotalBookingCount();
+
+    // Business operations
+    List<Cabin> getVIPCabins();
+    boolean canPerformBooking();
 }

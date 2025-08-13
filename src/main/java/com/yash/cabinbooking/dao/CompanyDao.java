@@ -1,24 +1,22 @@
 package com.yash.cabinbooking.dao;
 
 import com.yash.cabinbooking.model.Company;
-import java.util.List;
 
 /**
- * COMPANY DAO INTERFACE
+ * COMPANY DAO INTERFACE - SINGLE COMPANY VERSION
+ * Modified for Yash Technology single company usage
  */
 public interface CompanyDao {
 
-    // CRUD operations
-    boolean createCompany(Company company);
-    Company getCompanyById(int companyId);
-    Company getCompanyByName(String name);
-    List<Company> getAllCompanies();
-    List<Company> getActiveCompanies();
-    boolean updateCompany(Company company);
-    boolean deleteCompany(int companyId);
+    // Single company configuration operations
+    Company getCompanyConfig();
+    boolean updateCompanyConfig(Company company);
 
-    // Business operations
-    boolean activateCompany(int companyId);
-    boolean deactivateCompany(int companyId);
-    int getCompanyCabinCount(int companyId);
+    // Utility operations
+    boolean isCompanyActive();
+    int getTotalCabinCount();
+
+    // Company status management
+    boolean activateCompany();
+    boolean deactivateCompany();
 }
