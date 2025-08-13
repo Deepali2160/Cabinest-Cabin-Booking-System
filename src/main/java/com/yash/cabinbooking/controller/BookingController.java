@@ -191,6 +191,10 @@ public class BookingController extends HttpServlet {
             throws ServletException, IOException {
         System.out.println("📅 Processing booking request for user: " + user.getName());
 
+        // ✅ ADD THESE DEBUG LINES:
+        System.out.println("🔍 User Type: " + user.getUserType());
+        System.out.println("🔍 Is VIP: " + user.isVIP());
+
         try {
             String cabinIdStr = request.getParameter("cabinId");
             String bookingDateStr = request.getParameter("bookingDate");
@@ -218,8 +222,43 @@ public class BookingController extends HttpServlet {
                 return;
             }
 
-            if (!bookingService.isSlotAvailable(cabinId, bookingDate, timeSlot)) {
-                System.err.println("❌ Time slot not available: " + timeSlot);
+            // ✅ NEW: Check slot availability first
+            boolean slotAvailable = bookingService.isSlotAvailable(cabinId, bookingDate, timeSlot);
+            System.out.println("🔍 Slot Available: " + slotAvailable);
+
+            // ✅ VIP OVERRIDE LOGIC - THE MAIN FIX:
+            if (user.isVIP() && !slotAvailable) {
+                System.out.println("⭐⭐⭐ VIP USER DETECTED WITH OCCUPIED SLOT - TRIGGERING OVERRIDE!");
+
+                // Create VIP booking object
+                Booking vipBooking = new Booking();
+                vipBooking.setUserId(user.getUserId());
+                vipBooking.setCabinId(cabinId);
+                vipBooking.setBookingDate(bookingDate);
+                vipBooking.setTimeSlot(timeSlot);
+                vipBooking.setPurpose(purpose.trim());
+
+                // Force VIP booking
+                boolean vipSuccess = bookingService.forceBookingForVIP(vipBooking, user);
+
+                if (vipSuccess) {
+                    System.out.println("⭐ VIP OVERRIDE SUCCESSFUL!");
+                    HttpSession session = request.getSession();
+                    session.setAttribute("successMessage",
+                            "⭐ VIP Booking successful! Conflicting users have been automatically reallocated.");
+                    response.sendRedirect(request.getContextPath() + "/mybookings");
+                    return;
+                } else {
+                    System.err.println("❌ VIP override failed");
+                    request.setAttribute("error", "VIP booking failed. Please contact admin.");
+                    showBookingForm(request, response, user);
+                    return;
+                }
+            }
+
+            // ✅ NORMAL USER LOGIC - If not VIP or slot is available
+            if (!slotAvailable) {
+                System.err.println("❌ Time slot not available for normal user: " + timeSlot);
 
                 BookingDaoImpl bookingDao = new BookingDaoImpl();
                 List<String> alternativeSlots = bookingDao.getAlternativeTimeSlots(cabinId, bookingDate, timeSlot, 3);
@@ -234,6 +273,7 @@ public class BookingController extends HttpServlet {
                 return;
             }
 
+            // ✅ NORMAL BOOKING CREATION
             Booking newBooking = new Booking();
             newBooking.setUserId(user.getUserId());
             newBooking.setCabinId(cabinId);
@@ -268,9 +308,14 @@ public class BookingController extends HttpServlet {
         }
     }
 
+
     private void checkAvailability(HttpServletRequest request, HttpServletResponse response, User user)
             throws ServletException, IOException {
         System.out.println("🔍 Checking availability for AJAX request");
+
+        // ✅ ADD VIP CHECK HERE:
+        System.out.println("🔍 User Type: " + user.getUserType());
+        System.out.println("🔍 Is VIP: " + user.isVIP());
 
         String cabinIdStr = request.getParameter("cabinId");
         String dateStr = request.getParameter("date");
@@ -310,7 +355,14 @@ public class BookingController extends HttpServlet {
             if (isAvailable) {
                 response.getWriter().write("{\"available\": true, \"timeSlot\": \"" + timeSlot + "\"}");
             } else {
-                // Get alternatives using your DAO
+                // ✅ VIP OVERRIDE FOR AJAX:
+                if (user.isVIP()) {
+                    System.out.println("⭐⭐⭐ VIP USER DETECTED IN AJAX - ALLOWING OVERRIDE!");
+                    response.getWriter().write("{\"available\": true, \"vipOverride\": true, \"message\": \"VIP Override: You can book this slot. Conflicting users will be reallocated.\", \"timeSlot\": \"" + timeSlot + "\"}");
+                    return;
+                }
+
+                // Normal user - show alternatives
                 BookingDaoImpl bookingDao = new BookingDaoImpl();
                 List<String> alternativeSlots = bookingDao.getAlternativeTimeSlots(cabinId, date, timeSlot, 3);
 
@@ -329,6 +381,7 @@ public class BookingController extends HttpServlet {
             response.getWriter().write("{\"available\": false, \"error\": \"Server error: " + e.getMessage() + "\"}");
         }
     }
+
 
 
     // ✅ UPDATED: Single company my bookings

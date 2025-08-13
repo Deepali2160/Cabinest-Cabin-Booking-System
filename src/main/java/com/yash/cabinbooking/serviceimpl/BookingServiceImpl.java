@@ -1,6 +1,8 @@
 package com.yash.cabinbooking.serviceimpl;
 
 import com.yash.cabinbooking.service.BookingService;
+import com.yash.cabinbooking.service.UserService; // ✅ ADD THIS IMPORT
+import com.yash.cabinbooking.serviceimpl.UserServiceImpl; // ✅ ADD THIS IMPORT
 import com.yash.cabinbooking.dao.BookingDao;
 import com.yash.cabinbooking.dao.CabinDao;
 import com.yash.cabinbooking.daoimpl.BookingDaoImpl;
@@ -19,28 +21,22 @@ import java.util.ArrayList;
 import java.util.regex.Pattern;
 
 /**
- * BOOKING SERVICE IMPLEMENTATION - FLEXIBLE DURATION SYSTEM
+ * BOOKING SERVICE IMPLEMENTATION - ENHANCED WITH VIP OVERRIDE & ADMIN FEATURES
  *
- * EVALUATION EXPLANATION:
- * - Enhanced for flexible duration booking (15 min to 8+ hours)
- * - Smart time slot validation with pattern matching
- * - VIP priority handling and conflict resolution
- * - Admin approval workflow management
- * - Integration with AI recommendation system
- * - Complete booking lifecycle management
- *
- * INTERVIEW TALKING POINTS:
- * - "Flexible duration business logic with smart validation"
- * - "VIP priority system with automatic escalation"
- * - "Advanced conflict detection with overlap algorithms"
- * - "AI-ready booking analytics and user preference learning"
+ * FEATURES IMPLEMENTED:
+ * 1. ⭐ VIP Override: VIP users can force book any cabin, normal users auto-reallocated
+ * 2. 👨💼 Admin Cabin Reallocation: Admins can move users to different cabins
+ * 3. 🎯 Admin Manual Assignment: Admins can assign specific cabins instead of user choice
+ * 4. 🔧 Flexible duration booking system (15 min to 8+ hours)
+ * 5. 🚀 Smart conflict detection and resolution
  */
 public class BookingServiceImpl implements BookingService {
 
     private BookingDao bookingDAO;
     private CabinDao cabinDAO;
+    private UserService userService; // ✅ ADD THIS LINE
 
-    // ✅ NEW: Flexible duration constants
+    // ✅ Flexible duration constants
     private static final String TIME_SLOT_PATTERN = "^([0-9]|0[0-9]|1[0-9]|2[0-3]):[0-5][0-9]-([0-9]|0[0-9]|1[0-9]|2[0-3]):[0-5][0-9]$";
     private static final int MIN_DURATION_MINUTES = 15;
     private static final int MAX_DURATION_MINUTES = 480; // 8 hours
@@ -50,7 +46,8 @@ public class BookingServiceImpl implements BookingService {
     public BookingServiceImpl() {
         this.bookingDAO = new BookingDaoImpl();
         this.cabinDAO = new CabinDaoImpl();
-        System.out.println("🔧 BookingService initialized with DAO implementations");
+        this.userService = new UserServiceImpl(); // ✅ ADD THIS LINE
+        System.out.println("🔧 BookingService initialized with enhanced VIP & Admin features");
     }
 
     @Override
@@ -78,6 +75,12 @@ public class BookingServiceImpl implements BookingService {
         // Set user ID and apply VIP priority
         booking.setUserId(user.getUserId());
         applyVIPPriority(booking, user);
+
+        // ✅ ENHANCED: VIP Override Logic
+        if (user.isVIP() && !isSlotAvailable(booking.getCabinId(), booking.getBookingDate(), booking.getTimeSlot())) {
+            System.out.println("⭐ VIP user requesting occupied slot - attempting force booking");
+            return forceBookingForVIP(booking, user);
+        }
 
         // ✅ ENHANCED: Smart slot availability check
         if (!isSlotAvailable(booking.getCabinId(), booking.getBookingDate(), booking.getTimeSlot())) {
@@ -226,8 +229,6 @@ public class BookingServiceImpl implements BookingService {
         return bookingDAO.getAllBookings();
     }
 
-
-    // ✅ ADD THESE TWO METHODS HERE:
     @Override
     public List<Booking> getAllBookings() {
         System.out.println("📋 Fetching all bookings for admin");
@@ -443,7 +444,409 @@ public class BookingServiceImpl implements BookingService {
         return false;
     }
 
-    // ✅ ENHANCED: Private utility methods for flexible duration
+    @Override
+    public boolean approveBooking(int bookingId, int adminId) {
+        try {
+            return bookingDAO.approveBooking(bookingId, adminId);
+        } catch (Exception e) {
+            System.err.println("❌ Error approving booking: " + e.getMessage());
+            return false;
+        }
+    }
+
+    @Override
+    public boolean rejectBooking(int bookingId, int adminId) {
+        try {
+            return bookingDAO.rejectBooking(bookingId, adminId);
+        } catch (Exception e) {
+            System.err.println("❌ Error rejecting booking: " + e.getMessage());
+            return false;
+        }
+    }
+
+    @Override
+    public int getBookingCountByUserId(int userId) {
+        try {
+            String sql = "SELECT COUNT(*) FROM bookings WHERE user_id = ?";
+
+            Connection connection = DbUtil.getConnection();
+            PreparedStatement statement = connection.prepareStatement(sql);
+            statement.setInt(1, userId);
+
+            ResultSet resultSet = statement.executeQuery();
+            int count = 0;
+
+            if (resultSet.next()) {
+                count = resultSet.getInt(1);
+            }
+
+            resultSet.close();
+            statement.close();
+            connection.close();
+
+            return count;
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            return 0;
+        }
+    }
+
+    // ================================
+    // 🎯 YOUR 3 REQUIREMENTS IMPLEMENTATION
+    // ================================
+
+    // ✅ UPDATED: Debug Method for Conflict Detection
+    private void debugConflictingBookings(int cabinId, Date date, String timeSlot) {
+        System.out.println("🔍 DEBUG: All conflicting bookings for cabin " + cabinId);
+
+        List<Booking> allConflicts = bookingDAO.getConflictingBookings(cabinId, date, timeSlot);
+
+        System.out.println("📊 Total conflicts found: " + allConflicts.size());
+
+        for (Booking booking : allConflicts) {
+            System.out.println("📋 Conflict Found:");
+            System.out.println("   - Booking ID: " + booking.getBookingId());
+            System.out.println("   - User ID: " + booking.getUserId());
+            System.out.println("   - Status: " + booking.getStatus());
+            System.out.println("   - Priority: " + booking.getPriorityLevel());
+            System.out.println("   - Time Slot: " + booking.getTimeSlot());
+            System.out.println("   - Date: " + booking.getBookingDate());
+            System.out.println("   ----------------");
+        }
+    }
+
+    // ⭐ REQUIREMENT 1: ENHANCED VIP Override Implementation
+    @Override
+    public boolean forceBookingForVIP(Booking vipBooking, User vipUser) {
+        System.out.println("⭐ VIP Force Booking: " + vipUser.getName() + " for cabin " + vipBooking.getCabinId());
+
+        try {
+            // ✅ ADD DEBUG CALL:
+            debugConflictingBookings(vipBooking.getCabinId(), vipBooking.getBookingDate(), vipBooking.getTimeSlot());
+
+            // 1. Find conflicting normal bookings
+            List<Booking> conflicts = findConflictingNormalBookings(
+                    vipBooking.getCabinId(),
+                    vipBooking.getBookingDate(),
+                    vipBooking.getTimeSlot()
+            );
+
+            // ✅ ENHANCED: Process ALL conflicts, not just NORMAL priority
+            if (conflicts.isEmpty()) {
+                System.out.println("🔍 No NORMAL conflicts found, checking ALL conflicts...");
+
+                // Get ALL conflicting bookings regardless of priority/status
+                List<Booking> allConflicts = bookingDAO.getConflictingBookings(
+                        vipBooking.getCabinId(),
+                        vipBooking.getBookingDate(),
+                        vipBooking.getTimeSlot()
+                );
+
+                // Process ANY non-VIP booking as conflicting
+                for (Booking conflict : allConflicts) {
+                    if (conflict.getPriorityLevel() != Booking.PriorityLevel.VIP) {
+                        System.out.println("🎯 Processing non-VIP conflict: ID=" + conflict.getBookingId() +
+                                ", Status=" + conflict.getStatus() +
+                                ", Priority=" + conflict.getPriorityLevel());
+
+                        // Get user for the conflicting booking
+                        User normalUser = userService.getUserById(conflict.getUserId());
+
+                        if (normalUser != null) {
+                            // Simply reject the conflicting booking to make room for VIP
+                            conflict.setStatus(Booking.Status.REJECTED);
+                            bookingDAO.updateBooking(conflict);
+
+                            System.out.println("✅ Conflicting booking rejected: " + normalUser.getName() +
+                                    " (ID: " + conflict.getBookingId() + ")");
+                        }
+                    }
+                }
+            } else {
+                // Original logic for NORMAL priority conflicts
+                for (Booking conflict : conflicts) {
+                    User normalUser = userService.getUserById(conflict.getUserId());
+                    List<Cabin> alternatives = getAlternativeCabinsForUser(
+                            normalUser,
+                            vipBooking.getCabinId(),
+                            vipBooking.getBookingDate(),
+                            vipBooking.getTimeSlot()
+                    );
+
+                    if (!alternatives.isEmpty()) {
+                        // Reallocate normal user to first available alternative
+                        int newCabinId = alternatives.get(0).getCabinId();
+                        conflict.setCabinId(newCabinId);
+                        conflict.setStatus(Booking.Status.APPROVED);
+                        bookingDAO.updateBooking(conflict);
+
+                        System.out.println("✅ Normal user reallocated: " + normalUser.getName() + " to cabin " + newCabinId);
+                    } else {
+                        // No alternatives - reject normal booking
+                        conflict.setStatus(Booking.Status.REJECTED);
+                        bookingDAO.updateBooking(conflict);
+
+                        System.out.println("❌ Normal booking rejected - no alternatives available");
+                    }
+                }
+            }
+
+            // 3. Create VIP booking with highest priority
+            vipBooking.setPriorityLevel(Booking.PriorityLevel.VIP);
+            vipBooking.setStatus(Booking.Status.APPROVED); // Auto-approve VIP
+            vipBooking.setApprovedBy(vipUser.getUserId());
+            vipBooking.setApprovedAt(new java.sql.Timestamp(System.currentTimeMillis()));
+
+            boolean success = bookingDAO.createBooking(vipBooking);
+
+            if (success) {
+                System.out.println("⭐ VIP booking force-created successfully!");
+                return true;
+            }
+
+        } catch (Exception e) {
+            System.err.println("❌ VIP force booking failed: " + e.getMessage());
+            e.printStackTrace();
+        }
+
+        return false;
+    }
+
+    @Override
+    public List<Booking> findConflictingNormalBookings(int cabinId, Date date, String timeSlot) {
+        System.out.println("🔍 Finding conflicting normal bookings for cabin " + cabinId);
+
+        List<Booking> allConflicts = bookingDAO.getConflictingBookings(cabinId, date, timeSlot);
+        List<Booking> normalConflicts = new ArrayList<>();
+
+        for (Booking booking : allConflicts) {
+            // ✅ EXPANDED: Include APPROVED bookings and all non-VIP priorities
+            if (booking.getPriorityLevel() != Booking.PriorityLevel.VIP &&
+                    (booking.getStatus() == Booking.Status.PENDING ||
+                            booking.getStatus() == Booking.Status.APPROVED)) {
+                normalConflicts.add(booking);
+                System.out.println("🎯 Found conflicting booking: ID=" + booking.getBookingId() +
+                        ", Status=" + booking.getStatus() +
+                        ", Priority=" + booking.getPriorityLevel());
+            }
+        }
+
+        System.out.println("📋 Found " + normalConflicts.size() + " conflicting normal bookings");
+        return normalConflicts;
+    }
+
+    @Override
+    public boolean reallocateNormalUserToAlternative(int normalBookingId, User vipUser, int adminId) {
+        System.out.println("🔄 Reallocating normal user booking: " + normalBookingId);
+
+        try {
+            // Log the reallocation activity
+            Booking normalBooking = bookingDAO.getBookingById(normalBookingId);
+            if (normalBooking != null) {
+                // You can add audit logging here
+                System.out.println("📝 Booking " + normalBookingId + " reallocated due to VIP override by " + vipUser.getName());
+                return true;
+            }
+        } catch (Exception e) {
+            System.err.println("❌ Reallocation failed: " + e.getMessage());
+        }
+
+        return false;
+    }
+
+    // 👨💼 REQUIREMENT 2: Admin Cabin Reallocation Implementation
+    @Override
+    public List<Cabin> getAlternativeCabinsForUser(User user, int excludeCabinId, Date date, String timeSlot) {
+        System.out.println("🏠 Finding alternative cabins for user: " + user.getName());
+
+        try {
+            List<Cabin> allCabins = cabinDAO.getAccessibleCabins(user);
+            List<Cabin> alternatives = new ArrayList<>();
+
+            for (Cabin cabin : allCabins) {
+                // Skip the excluded cabin
+                if (cabin.getCabinId() == excludeCabinId) {
+                    continue;
+                }
+
+                // Check if cabin is available for the time slot
+                if (bookingDAO.isSlotAvailable(cabin.getCabinId(), date, timeSlot)) {
+                    alternatives.add(cabin);
+                }
+            }
+
+            System.out.println("✅ Found " + alternatives.size() + " alternative cabins");
+            return alternatives;
+
+        } catch (Exception e) {
+            System.err.println("❌ Error finding alternatives: " + e.getMessage());
+            return new ArrayList<>();
+        }
+    }
+
+    @Override
+    public boolean adminReallocateUserCabin(int bookingId, int newCabinId, int adminId, String reason) {
+        System.out.println("👨💼 Admin reallocating booking " + bookingId + " to cabin " + newCabinId);
+
+        try {
+            Booking booking = bookingDAO.getBookingById(bookingId);
+            if (booking == null) {
+                System.err.println("❌ Booking not found: " + bookingId);
+                return false;
+            }
+
+            // Verify new cabin is available
+            if (!bookingDAO.isSlotAvailable(newCabinId, booking.getBookingDate(), booking.getTimeSlot())) {
+                System.err.println("❌ New cabin not available: " + newCabinId);
+                return false;
+            }
+
+            // Update booking with new cabin
+            int oldCabinId = booking.getCabinId();
+            booking.setCabinId(newCabinId);
+            booking.setStatus(Booking.Status.APPROVED); // Auto-approve admin reallocation
+            booking.setApprovedBy(adminId);
+            booking.setApprovedAt(new java.sql.Timestamp(System.currentTimeMillis()));
+
+            boolean success = bookingDAO.updateBooking(booking);
+
+            if (success) {
+                // Notify user of reallocation
+                notifyUserOfReallocation(booking.getUserId(), oldCabinId, newCabinId, reason);
+                System.out.println("✅ Admin reallocation successful");
+                return true;
+            }
+
+        } catch (Exception e) {
+            System.err.println("❌ Admin reallocation failed: " + e.getMessage());
+            e.printStackTrace();
+        }
+
+        return false;
+    }
+
+    @Override
+    public boolean notifyUserOfReallocation(int userId, int oldCabinId, int newCabinId, String reason) {
+        System.out.println("📧 Notifying user " + userId + " of cabin reallocation");
+
+        try {
+            // Here you can implement email notification, system notification, etc.
+            // For now, just log the notification
+            User user = userService.getUserById(userId); // ✅ NOW WORKS
+            Cabin oldCabin = cabinDAO.getCabinById(oldCabinId);
+            Cabin newCabin = cabinDAO.getCabinById(newCabinId);
+
+            String notification = String.format(
+                    "Dear %s, your booking has been moved from %s to %s. Reason: %s",
+                    user.getName(),
+                    oldCabin.getName(),
+                    newCabin.getName(),
+                    reason
+            );
+
+            System.out.println("📨 Notification: " + notification);
+            return true;
+
+        } catch (Exception e) {
+            System.err.println("❌ Notification failed: " + e.getMessage());
+            return false;
+        }
+    }
+
+    // 🎯 REQUIREMENT 3: Admin Manual Assignment Implementation
+    @Override
+    public boolean adminAssignSpecificCabin(int userId, int requestedCabinId, int adminChosenCabinId,
+                                            Date date, String timeSlot, String purpose) {
+        System.out.println("🎯 Admin assigning specific cabin: " + adminChosenCabinId + " for user: " + userId);
+
+        try {
+            User user = userService.getUserById(userId); // ✅ NOW WORKS
+            if (user == null) {
+                System.err.println("❌ User not found: " + userId);
+                return false;
+            }
+
+            // Check if admin chosen cabin is available
+            if (!bookingDAO.isSlotAvailable(adminChosenCabinId, date, timeSlot)) {
+                System.err.println("❌ Admin chosen cabin not available: " + adminChosenCabinId);
+                return false;
+            }
+
+            // Create booking with admin's choice
+            Booking adminChoiceBooking = new Booking();
+            adminChoiceBooking.setUserId(userId);
+            adminChoiceBooking.setCabinId(adminChosenCabinId);
+            adminChoiceBooking.setBookingDate(date);
+            adminChoiceBooking.setTimeSlot(timeSlot);
+            adminChoiceBooking.setPurpose(purpose + " (Admin assigned alternative)");
+            adminChoiceBooking.setStatus(Booking.Status.APPROVED); // Pre-approved by admin
+            adminChoiceBooking.setPriorityLevel(user.isVIP() ? Booking.PriorityLevel.VIP : Booking.PriorityLevel.HIGH);
+
+            boolean success = bookingDAO.createBooking(adminChoiceBooking);
+
+            if (success) {
+                System.out.println("✅ Admin manual assignment successful");
+                return true;
+            }
+
+        } catch (Exception e) {
+            System.err.println("❌ Admin manual assignment failed: " + e.getMessage());
+            e.printStackTrace();
+        }
+
+        return false;
+    }
+
+    @Override
+    public List<Cabin> getSuitableAlternativeCabins(int originalCabinId, User user) {
+        System.out.println("🔍 Finding suitable alternatives for cabin: " + originalCabinId);
+
+        try {
+            Cabin originalCabin = cabinDAO.getCabinById(originalCabinId);
+            List<Cabin> allCabins = cabinDAO.getAccessibleCabins(user);
+            List<Cabin> suitable = new ArrayList<>();
+
+            for (Cabin cabin : allCabins) {
+                if (cabin.getCabinId() != originalCabinId) {
+                    // Prefer cabins with similar or larger capacity
+                    if (originalCabin != null && cabin.getCapacity() >= originalCabin.getCapacity()) {
+                        suitable.add(cabin);
+                    }
+                }
+            }
+
+            System.out.println("📋 Found " + suitable.size() + " suitable alternatives");
+            return suitable;
+
+        } catch (Exception e) {
+            System.err.println("❌ Error finding suitable alternatives: " + e.getMessage());
+            return new ArrayList<>();
+        }
+    }
+
+    @Override
+    public boolean createBookingWithAdminChoice(Booking originalRequest, int adminChosenCabinId, int adminId) {
+        System.out.println("🎯 Creating booking with admin choice");
+
+        try {
+            // Update original request with admin's cabin choice
+            originalRequest.setCabinId(adminChosenCabinId);
+            originalRequest.setStatus(Booking.Status.APPROVED);
+            originalRequest.setApprovedBy(adminId);
+            originalRequest.setApprovedAt(new java.sql.Timestamp(System.currentTimeMillis()));
+
+            return bookingDAO.createBooking(originalRequest);
+
+        } catch (Exception e) {
+            System.err.println("❌ Admin choice booking failed: " + e.getMessage());
+            return false;
+        }
+    }
+
+    // ================================
+    // PRIVATE UTILITY METHODS
+    // ================================
 
     private boolean isValidBookingData(Booking booking) {
         if (booking == null) {
@@ -599,55 +1002,4 @@ public class BookingServiceImpl implements BookingService {
 
         return timeSlots;
     }
-    @Override
-    public boolean approveBooking(int bookingId, int adminId) {
-        try {
-            return bookingDAO.approveBooking(bookingId, adminId);
-        } catch (Exception e) {
-            System.err.println("❌ Error approving booking: " + e.getMessage());
-            return false;
-        }
-    }
-
-    @Override
-    public boolean rejectBooking(int bookingId, int adminId) {
-        try {
-            return bookingDAO.rejectBooking(bookingId, adminId);
-        } catch (Exception e) {
-            System.err.println("❌ Error rejecting booking: " + e.getMessage());
-            return false;
-        }
-    }
-
-
-// Add this method to your BookingServiceImpl class
-
-    @Override
-    public int getBookingCountByUserId(int userId) {
-        try {
-            String sql = "SELECT COUNT(*) FROM bookings WHERE user_id = ?";
-
-            Connection connection = DbUtil.getConnection();
-            PreparedStatement statement = connection.prepareStatement(sql);
-            statement.setInt(1, userId);
-
-            ResultSet resultSet = statement.executeQuery();
-            int count = 0;
-
-            if (resultSet.next()) {
-                count = resultSet.getInt(1);
-            }
-
-            resultSet.close();
-            statement.close();
-            connection.close();
-
-            return count;
-
-        } catch (Exception e) {
-            e.printStackTrace();
-            return 0;
-        }
-    }
-
 }

@@ -14,10 +14,11 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpSession;
 import java.io.IOException;
+import java.sql.Date; // ✅ ADD THIS IMPORT
 import java.util.*;
 
 /**
- * ✅ PRODUCTION READY ADMIN CONTROLLER - WITH PROMOTE USER FUNCTIONALITY
+ * ✅ PRODUCTION READY ADMIN CONTROLLER - WITH VIP OVERRIDE & ADMIN FEATURES
  */
 @WebServlet(urlPatterns = {
         "/admin/dashboard",
@@ -25,8 +26,8 @@ import java.util.*;
         "/admin/users",
         "/admin/bookings",
         "/admin/cabins",
-        "/admin/promote-user",    // ✅ ADDED FOR PROMOTE FUNCTIONALITY
-        "/admin/demote-user"      // ✅ ADDED FOR DEMOTE FUNCTIONALITY
+        "/admin/promote-user",
+        "/admin/demote-user"
 })
 public class AdminController extends HttpServlet {
 
@@ -89,7 +90,6 @@ public class AdminController extends HttpServlet {
                     showCabinManagement(request, response, currentUser);
                     break;
 
-                // ✅ NEW PROMOTE/DEMOTE FUNCTIONALITY
                 case "promote-user":
                     handlePromoteUser(request, response, currentUser);
                     break;
@@ -126,7 +126,7 @@ public class AdminController extends HttpServlet {
                 }
 
                 // Collect VIP bookings
-                if ("VIP".equals(booking.getPriorityLevel())) {
+                if (booking.getPriorityLevel() == Booking.PriorityLevel.VIP) {
                     vipBookings.add(booking);
                 }
 
@@ -209,7 +209,7 @@ public class AdminController extends HttpServlet {
                 }
 
                 // Count VIP priority bookings
-                if ("VIP".equals(booking.getPriorityLevel())) {
+                if (booking.getPriorityLevel() == Booking.PriorityLevel.VIP) {
                     vipCount++;
                 }
 
@@ -231,7 +231,7 @@ public class AdminController extends HttpServlet {
                         }
                         break;
                     case "vip":
-                        if ("VIP".equals(booking.getPriorityLevel())) {
+                        if (booking.getPriorityLevel() == Booking.PriorityLevel.VIP) {
                             filteredBookings.add(booking);
                         }
                         break;
@@ -408,7 +408,7 @@ public class AdminController extends HttpServlet {
                         request.getSession().setAttribute("errorMessage",
                                 "Failed to promote user to VIP!");
                     }
-                } else if ("admin".equals(newRole) && "SUPER_ADMIN".equals(admin.getUserType())) {
+                } else if ("admin".equals(newRole) && "SUPER_ADMIN".equals(admin.getUserType().toString())) {
                     success = userService.promoteToAdmin(userIdInt);
                     if (success) {
                         request.getSession().setAttribute("successMessage",
@@ -553,6 +553,18 @@ public class AdminController extends HttpServlet {
                 response.sendRedirect(request.getContextPath() + "/admin/bookings");
                 return;
 
+            } else if ("forceVipBooking".equals(action)) {
+                handleVipForceBooking(request, response, admin);
+                return;
+
+            } else if ("reallocateCabin".equals(action)) {
+                handleCabinReallocation(request, response, admin);
+                return;
+
+            } else if ("assignSpecificCabin".equals(action)) {
+                handleSpecificCabinAssignment(request, response, admin);
+                return;
+
             } else {
                 request.getSession().setAttribute("errorMessage", "Unknown action requested");
                 response.sendRedirect(request.getContextPath() + "/admin/bookings");
@@ -562,6 +574,119 @@ public class AdminController extends HttpServlet {
             request.getSession().setAttribute("errorMessage", "Error processing request: " + e.getMessage());
             response.sendRedirect(request.getContextPath() + "/admin/bookings");
         }
+    }
+
+    // 🎯 NEW METHODS FOR YOUR 3 REQUIREMENTS:
+
+    // ⭐ REQUIREMENT 1: VIP Force Booking Handler
+    private void handleVipForceBooking(HttpServletRequest request, HttpServletResponse response, User admin)
+            throws ServletException, IOException {
+
+        try {
+            int vipUserId = Integer.parseInt(request.getParameter("vipUserId"));
+            int cabinId = Integer.parseInt(request.getParameter("cabinId"));
+            String dateStr = request.getParameter("bookingDate");
+            String timeSlot = request.getParameter("timeSlot");
+            String purpose = request.getParameter("purpose");
+
+            Date bookingDate = Date.valueOf(dateStr);
+
+            // Get VIP user
+            User vipUser = userService.getUserById(vipUserId);
+            if (vipUser == null || !vipUser.isVIP()) {
+                request.getSession().setAttribute("errorMessage", "Invalid VIP user!");
+                response.sendRedirect(request.getContextPath() + "/admin/bookings");
+                return;
+            }
+
+            // Create VIP booking
+            Booking vipBooking = new Booking();
+            vipBooking.setUserId(vipUserId);
+            vipBooking.setCabinId(cabinId);
+            vipBooking.setBookingDate(bookingDate);
+            vipBooking.setTimeSlot(timeSlot);
+            vipBooking.setPurpose(purpose);
+
+            boolean success = bookingService.forceBookingForVIP(vipBooking, vipUser);
+
+            if (success) {
+                request.getSession().setAttribute("successMessage",
+                        "VIP booking created successfully! Normal users have been reallocated automatically.");
+            } else {
+                request.getSession().setAttribute("errorMessage",
+                        "Failed to create VIP booking!");
+            }
+
+        } catch (Exception e) {
+            request.getSession().setAttribute("errorMessage",
+                    "Error processing VIP booking: " + e.getMessage());
+        }
+
+        response.sendRedirect(request.getContextPath() + "/admin/bookings");
+    }
+
+    // 👨💼 REQUIREMENT 2: Cabin Reallocation Handler
+    private void handleCabinReallocation(HttpServletRequest request, HttpServletResponse response, User admin)
+            throws ServletException, IOException {
+
+        try {
+            int bookingId = Integer.parseInt(request.getParameter("bookingId"));
+            int newCabinId = Integer.parseInt(request.getParameter("newCabinId"));
+            String reason = request.getParameter("reason");
+
+            if (reason == null || reason.trim().isEmpty()) {
+                reason = "Admin reallocation for better resource management";
+            }
+
+            boolean success = bookingService.adminReallocateUserCabin(bookingId, newCabinId, admin.getUserId(), reason);
+
+            if (success) {
+                request.getSession().setAttribute("successMessage",
+                        "Booking reallocated successfully! User has been notified.");
+            } else {
+                request.getSession().setAttribute("errorMessage",
+                        "Failed to reallocate booking!");
+            }
+
+        } catch (Exception e) {
+            request.getSession().setAttribute("errorMessage",
+                    "Error reallocating booking: " + e.getMessage());
+        }
+
+        response.sendRedirect(request.getContextPath() + "/admin/bookings");
+    }
+
+    // 🎯 REQUIREMENT 3: Specific Cabin Assignment Handler
+    private void handleSpecificCabinAssignment(HttpServletRequest request, HttpServletResponse response, User admin)
+            throws ServletException, IOException {
+
+        try {
+            int userId = Integer.parseInt(request.getParameter("userId"));
+            int requestedCabinId = Integer.parseInt(request.getParameter("requestedCabinId"));
+            int adminChosenCabinId = Integer.parseInt(request.getParameter("adminChosenCabinId"));
+            String dateStr = request.getParameter("bookingDate");
+            String timeSlot = request.getParameter("timeSlot");
+            String purpose = request.getParameter("purpose");
+
+            Date bookingDate = Date.valueOf(dateStr);
+
+            boolean success = bookingService.adminAssignSpecificCabin(
+                    userId, requestedCabinId, adminChosenCabinId, bookingDate, timeSlot, purpose);
+
+            if (success) {
+                request.getSession().setAttribute("successMessage",
+                        "Cabin assigned successfully! Booking created with admin's choice.");
+            } else {
+                request.getSession().setAttribute("errorMessage",
+                        "Failed to assign specific cabin!");
+            }
+
+        } catch (Exception e) {
+            request.getSession().setAttribute("errorMessage",
+                    "Error assigning cabin: " + e.getMessage());
+        }
+
+        response.sendRedirect(request.getContextPath() + "/admin/bookings");
     }
 
     // ✅ UTILITY METHODS

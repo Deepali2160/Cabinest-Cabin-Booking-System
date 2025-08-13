@@ -1,6 +1,7 @@
 package com.yash.cabinbooking.service;
 
 import com.yash.cabinbooking.model.Booking;
+import com.yash.cabinbooking.model.Cabin;
 import com.yash.cabinbooking.model.User;
 import java.sql.Date;
 import java.util.List;
@@ -55,4 +56,19 @@ public interface BookingService {
     boolean approveBooking(int bookingId, int adminId);
     boolean rejectBooking(int bookingId, int adminId);
     int getBookingCountByUserId(int userId);
+    // ⭐ REQUIREMENT 1: VIP Override Methods
+    boolean forceBookingForVIP(Booking vipBooking, User vipUser);
+    boolean reallocateNormalUserToAlternative(int normalBookingId, User vipUser, int adminId);
+    List<Booking> findConflictingNormalBookings(int cabinId, Date date, String timeSlot);
+
+    // 👨💼 REQUIREMENT 2: Admin Cabin Reallocation Methods
+    List<Cabin> getAlternativeCabinsForUser(User user, int excludeCabinId, Date date, String timeSlot);
+    boolean adminReallocateUserCabin(int bookingId, int newCabinId, int adminId, String reason);
+    boolean notifyUserOfReallocation(int userId, int oldCabinId, int newCabinId, String reason);
+
+    // 🎯 REQUIREMENT 3: Admin Manual Assignment Methods
+    boolean adminAssignSpecificCabin(int userId, int requestedCabinId, int adminChosenCabinId, Date date, String timeSlot, String purpose);
+    List<Cabin> getSuitableAlternativeCabins(int originalCabinId, User user);
+    boolean createBookingWithAdminChoice(Booking originalRequest, int adminChosenCabinId, int adminId);
+
 }
