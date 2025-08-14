@@ -483,7 +483,7 @@
 
     <!-- Footer -->
     <footer class="bookings-footer">
-        <p>&copy; 2024 Yash Technology - Cabin Booking System</p>
+        <p>&copy; 2025 Yash Technology - Cabin Booking System</p>
     </footer>
 
     <script src="${pageContext.request.contextPath}/js/common.js"></script>

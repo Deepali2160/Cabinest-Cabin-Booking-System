@@ -545,7 +545,7 @@
     <!-- Footer -->
     <footer class="admin-footer">
         <div class="footer-content">
-            <p>&copy; 2024 Yash Technology - Analytics Dashboard</p>
+            <p>&copy; 2025 Yash Technology - Analytics Dashboard</p>
             <div class="footer-links">
                 <c:choose>
                     <c:when test="${not empty now}">

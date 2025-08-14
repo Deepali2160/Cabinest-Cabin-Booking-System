@@ -434,7 +434,7 @@
 
     <!-- Footer -->
     <footer class="admin-footer">
-        <p>&copy; 2024 Yash Technology - Booking Management System</p>
+        <p>&copy; 2025 Yash Technology - Booking Management System</p>
     </footer>
 
     <script src="${pageContext.request.contextPath}/js/common.js"></script>

@@ -487,7 +487,7 @@
 
     <!-- Footer -->
     <footer class="admin-footer">
-        <p>&copy; 2024 Yash Technology - User Management System</p>
+        <p>&copy; 2025 Yash Technology - User Management System</p>
     </footer>
 
     <script src="${pageContext.request.contextPath}/js/common.js"></script>

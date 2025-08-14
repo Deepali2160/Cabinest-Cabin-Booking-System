@@ -328,7 +328,7 @@
 
     <!-- Footer -->
     <footer class="admin-footer">
-        <p>&copy; 2024 Yash Technology - Cabin Management System</p>
+        <p>&copy; 2025 Yash Technology - Cabin Management System</p>
     </footer>
 
     <script src="${pageContext.request.contextPath}/js/common.js"></script>

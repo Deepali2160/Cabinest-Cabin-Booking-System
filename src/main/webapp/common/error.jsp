@@ -164,7 +164,7 @@
     <!-- Footer -->
     <footer class="bg-dark text-light text-center py-3 mt-5">
         <div class="container">
-            <p class="mb-0">&copy; 2024 Cabin Booking System</p>
+            <p class="mb-0">&copy; 2025 Cabin Booking System</p>
         </div>
     </footer>
 
