@@ -1,9 +1,9 @@
 // ====================================
-// REGISTER PAGE - MINIMAL FUNCTIONALITY
+// REGISTER PAGE - ENHANCED WITH BCRYPT SECURITY REQUIREMENTS
 // ====================================
 
 document.addEventListener('DOMContentLoaded', function() {
-    console.log('📝 Registration page initialized');
+    console.log('📝 Registration page initialized with BCrypt security');
 
     const registerForm = document.getElementById('registerForm');
     const nameInput = document.getElementById('name');
@@ -12,58 +12,196 @@ document.addEventListener('DOMContentLoaded', function() {
     const confirmPasswordInput = document.getElementById('confirmPassword');
     const registerBtn = document.querySelector('.register-btn');
 
-    // Password strength checker
+    // ✅ ENHANCED: Updated password strength checker for 8-char requirement
     function checkPasswordStrength(password) {
         let strength = 0;
         let feedback = [];
+        let requirements = {
+            length: false,
+            lowercase: false,
+            uppercase: false,
+            digit: false,
+            special: false
+        };
 
-        if (password.length >= 6) strength++;
-        if (password.match(/[a-z]+/)) strength++;
-        if (password.match(/[A-Z]+/)) strength++;
-        if (password.match(/[0-9]+/)) strength++;
-        if (password.match(/[$@#&!]+/)) strength++;
+        // Check length (minimum 8)
+        if (password.length >= 8) {
+            strength++;
+            requirements.length = true;
+        } else {
+            feedback.push('At least 8 characters required');
+        }
 
-        if (password.length < 6) {
-            feedback.push('At least 6 characters');
+        // Check lowercase
+        if (password.match(/[a-z]+/)) {
+            strength++;
+            requirements.lowercase = true;
+        } else {
+            feedback.push('Add lowercase letters (a-z)');
         }
-        if (!password.match(/[a-z]+/)) {
-            feedback.push('Add lowercase letters');
+
+        // Check uppercase
+        if (password.match(/[A-Z]+/)) {
+            strength++;
+            requirements.uppercase = true;
+        } else {
+            feedback.push('Add uppercase letters (A-Z)');
         }
-        if (!password.match(/[A-Z]+/)) {
-            feedback.push('Add uppercase letters');
+
+        // Check digits
+        if (password.match(/[0-9]+/)) {
+            strength++;
+            requirements.digit = true;
+        } else {
+            feedback.push('Add numbers (0-9)');
         }
-        if (!password.match(/[0-9]+/)) {
-            feedback.push('Add numbers');
+
+        // ✅ ENHANCED: Updated special character check
+        if (password.match(/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]+/)) {
+            strength++;
+            requirements.special = true;
+        } else {
+            feedback.push('Add special characters (!@#$%^&*)');
+        }
+
+        // ✅ ENHANCED: Better strength levels
+        let level;
+        if (strength === 0) {
+            level = 'none';
+        } else if (strength <= 2) {
+            level = 'very-weak';
+        } else if (strength === 3) {
+            level = 'weak';
+        } else if (strength === 4) {
+            level = 'moderate';
+        } else if (strength === 5) {
+            level = 'strong';
         }
 
         return {
             strength: strength,
             feedback: feedback,
-            level: strength < 2 ? 'weak' : strength < 4 ? 'medium' : 'strong'
+            level: level,
+            requirements: requirements,
+            isValid: strength >= 5 // All 5 requirements must be met
         };
     }
 
-    // Add password strength indicator
+    // ✅ ENHANCED: Add comprehensive password strength indicator
     function addPasswordStrengthIndicator() {
-        if (!document.querySelector('.password-strength')) {
+        if (!document.querySelector('.password-strength-indicator')) {
             const strengthDiv = document.createElement('div');
-            strengthDiv.className = 'password-strength';
-            strengthDiv.innerHTML = '<div class="password-strength-bar"></div>';
+            strengthDiv.className = 'password-strength-indicator';
+            strengthDiv.innerHTML = `
+                <div class="password-strength-bar">
+                    <div class="strength-fill"></div>
+                </div>
+                <div class="password-strength-text"></div>
+                <div class="password-requirements-check">
+                    <small id="req-length">❌ 8+ characters</small>
+                    <small id="req-lower">❌ Lowercase (a-z)</small>
+                    <small id="req-upper">❌ Uppercase (A-Z)</small>
+                    <small id="req-digit">❌ Number (0-9)</small>
+                    <small id="req-special">❌ Special (!@#$%^&*)</small>
+                </div>
+            `;
             passwordInput.parentNode.appendChild(strengthDiv);
+
+            // Add CSS styles
+            const style = document.createElement('style');
+            style.textContent = `
+                .password-strength-indicator {
+                    margin-top: 8px;
+                }
+                .password-strength-bar {
+                    width: 100%;
+                    height: 6px;
+                    background: #e0e0e0;
+                    border-radius: 3px;
+                    overflow: hidden;
+                    margin-bottom: 5px;
+                }
+                .strength-fill {
+                    height: 100%;
+                    width: 0%;
+                    transition: all 0.3s ease;
+                    border-radius: 3px;
+                }
+                .password-strength-text {
+                    font-size: 0.9em;
+                    font-weight: bold;
+                    margin-bottom: 5px;
+                }
+                .password-requirements-check {
+                    display: grid;
+                    grid-template-columns: 1fr 1fr;
+                    gap: 3px;
+                }
+                .password-requirements-check small {
+                    font-size: 0.8em;
+                    transition: color 0.3s ease;
+                }
+                .req-met { color: #28a745; }
+                .req-unmet { color: #dc3545; }
+
+                /* Strength level colors */
+                .strength-none .strength-fill { background: #ddd; }
+                .strength-very-weak .strength-fill { background: #ff4444; }
+                .strength-weak .strength-fill { background: #ff8800; }
+                .strength-moderate .strength-fill { background: #ffbb00; }
+                .strength-strong .strength-fill { background: #28a745; }
+            `;
+            document.head.appendChild(style);
         }
     }
 
-    // Update password strength display
+    // ✅ ENHANCED: Update password strength display with requirements
     function updatePasswordStrength() {
         const result = checkPasswordStrength(passwordInput.value);
-        const strengthDiv = document.querySelector('.password-strength');
+        const strengthDiv = document.querySelector('.password-strength-indicator');
 
         if (strengthDiv) {
-            strengthDiv.className = `password-strength ${result.level}`;
+            const strengthFill = strengthDiv.querySelector('.strength-fill');
+            const strengthText = strengthDiv.querySelector('.password-strength-text');
+
+            // Update strength bar
+            strengthDiv.className = `password-strength-indicator strength-${result.level}`;
+            strengthFill.style.width = `${(result.strength / 5) * 100}%`;
+
+            // Update strength text
+            const strengthMessages = {
+                'none': '',
+                'very-weak': '🔴 Very Weak',
+                'weak': '🟡 Weak',
+                'moderate': '🟠 Moderate',
+                'strong': '🟢 Strong - Secure!'
+            };
+            strengthText.textContent = strengthMessages[result.level];
+
+            // ✅ NEW: Update individual requirements
+            updateRequirement('req-length', result.requirements.length);
+            updateRequirement('req-lower', result.requirements.lowercase);
+            updateRequirement('req-upper', result.requirements.uppercase);
+            updateRequirement('req-digit', result.requirements.digit);
+            updateRequirement('req-special', result.requirements.special);
         }
     }
 
-    // Form validation
+    // ✅ NEW: Update individual requirement status
+    function updateRequirement(reqId, met) {
+        const reqElement = document.getElementById(reqId);
+        if (reqElement) {
+            if (met) {
+                reqElement.textContent = reqElement.textContent.replace('❌', '✅');
+                reqElement.className = 'req-met';
+            } else {
+                reqElement.textContent = reqElement.textContent.replace('✅', '❌');
+                reqElement.className = 'req-unmet';
+            }
+        }
+    }
+
+    // ✅ ENHANCED: Updated form validation with 8-char requirement
     function validateForm() {
         let isValid = true;
 
@@ -96,19 +234,20 @@ document.addEventListener('DOMContentLoaded', function() {
             emailInput.classList.add('success');
         }
 
-        // Validate password
+        // ✅ ENHANCED: Validate password with BCrypt requirements
         const passwordStrength = checkPasswordStrength(passwordInput.value);
         if (!passwordInput.value.trim()) {
             passwordInput.classList.add('error');
+            Utils.showMessage('Password is required', 'error');
             isValid = false;
-        } else if (passwordInput.value.length < 6) {
+        } else if (passwordInput.value.length < 8) {
             passwordInput.classList.add('error');
-            Utils.showMessage('Password must be at least 6 characters', 'error');
+            Utils.showMessage('Password must be at least 8 characters long', 'error');
             isValid = false;
-        } else if (passwordStrength.level === 'weak') {
-            passwordInput.classList.add('warning');
-            Utils.showMessage('Password is weak. Consider adding more characters', 'warning');
-            // Don't prevent submission for weak passwords, just warn
+        } else if (!passwordStrength.isValid) {
+            passwordInput.classList.add('error');
+            Utils.showMessage('Password must meet all security requirements: ' + passwordStrength.feedback.join(', '), 'error');
+            isValid = false;
         } else {
             passwordInput.classList.add('success');
         }
@@ -116,6 +255,7 @@ document.addEventListener('DOMContentLoaded', function() {
         // Validate password confirmation
         if (!confirmPasswordInput.value.trim()) {
             confirmPasswordInput.classList.add('error');
+            Utils.showMessage('Please confirm your password', 'error');
             isValid = false;
         } else if (passwordInput.value !== confirmPasswordInput.value) {
             confirmPasswordInput.classList.add('error');
@@ -143,10 +283,25 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
-    // Password strength checking
+    // ✅ ENHANCED: Password strength checking with real-time feedback
     passwordInput.addEventListener('input', function() {
         addPasswordStrengthIndicator();
         updatePasswordStrength();
+
+        // Real-time validation feedback
+        const result = checkPasswordStrength(this.value);
+        if (this.value.length > 0) {
+            if (result.isValid) {
+                this.classList.remove('error', 'warning');
+                this.classList.add('success');
+            } else if (result.strength >= 3) {
+                this.classList.remove('error', 'success');
+                this.classList.add('warning');
+            } else {
+                this.classList.remove('warning', 'success');
+                this.classList.add('error');
+            }
+        }
 
         // Also check confirm password if it has value
         if (confirmPasswordInput.value) {
@@ -167,9 +322,9 @@ document.addEventListener('DOMContentLoaded', function() {
 
     confirmPasswordInput.addEventListener('input', validatePasswordMatch);
 
-    // Form submission
+    // ✅ ENHANCED: Form submission with BCrypt validation
     registerForm.addEventListener('submit', function(e) {
-        console.log('📝 Registration form submitted');
+        console.log('📝 Registration form submitted with BCrypt validation');
 
         // Clear previous messages
         Utils.clearMessages();
@@ -180,19 +335,25 @@ document.addEventListener('DOMContentLoaded', function() {
             return false;
         }
 
+        // ✅ ADDITIONAL: Final password security check
+        const passwordStrength = checkPasswordStrength(passwordInput.value);
+        if (!passwordStrength.isValid) {
+            e.preventDefault();
+            Utils.showMessage('Please ensure your password meets all security requirements for BCrypt encryption.', 'error');
+            return false;
+        }
+
         // Show loading state
-        Utils.showLoading(registerBtn);
+        Utils.showLoading(registerBtn, '🔐 Creating Secure Account...');
 
-        console.log('✅ Registration form validation passed, submitting...');
+        console.log('✅ Registration form validation passed with strong password, submitting...');
 
-        // Form will submit normally
-        // Loading state will be cleared on page reload/redirect
+        // Form will submit normally with BCrypt hashing on server
     });
 
     // Enter key handling
     document.addEventListener('keypress', function(e) {
         if (e.key === 'Enter' && e.target.tagName === 'INPUT') {
-            // Move to next field or submit
             const inputs = [nameInput, emailInput, passwordInput, confirmPasswordInput];
             const currentIndex = inputs.indexOf(e.target);
 
@@ -212,20 +373,22 @@ document.addEventListener('DOMContentLoaded', function() {
         emailInput.focus();
     }
 
-    // Email availability check (optional enhancement)
+    // Email availability check with enhanced feedback
     let emailCheckTimeout;
     emailInput.addEventListener('input', function() {
         clearTimeout(emailCheckTimeout);
         emailCheckTimeout = setTimeout(() => {
             if (Utils.isValidEmail(this.value)) {
+                console.log('📧 Email format valid for BCrypt registration:', this.value);
+
                 // Could add AJAX call to check email availability
-                console.log('📧 Email format valid:', this.value);
+                // Example: checkEmailAvailability(this.value);
             }
         }, 500);
     });
 });
 
-// Additional utility for registration
+// ✅ ENHANCED: Additional utility for secure registration
 const RegisterUtils = {
     // Format name properly
     formatName: function(name) {
@@ -237,9 +400,39 @@ const RegisterUtils = {
 
     // Check if email domain is common
     isCommonEmailDomain: function(email) {
-        const commonDomains = ['gmail.com', 'yahoo.com', 'hotmail.com', 'outlook.com'];
+        const commonDomains = ['gmail.com', 'yahoo.com', 'hotmail.com', 'outlook.com', 'yashtech.com'];
         const domain = email.split('@')[1];
         return commonDomains.includes(domain);
+    },
+
+    // ✅ NEW: Generate password suggestions
+    generatePasswordSuggestion: function() {
+        const chars = 'abcdefghijklmnopqrstuvwxyz';
+        const upperChars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+        const numbers = '0123456789';
+        const specials = '!@#$%^&*';
+
+        let password = '';
+        password += chars[Math.floor(Math.random() * chars.length)];
+        password += upperChars[Math.floor(Math.random() * upperChars.length)];
+        password += numbers[Math.floor(Math.random() * numbers.length)];
+        password += specials[Math.floor(Math.random() * specials.length)];
+
+        // Add more random characters
+        const allChars = chars + upperChars + numbers + specials;
+        for (let i = 0; i < 4; i++) {
+            password += allChars[Math.floor(Math.random() * allChars.length)];
+        }
+
+        return password;
+    },
+
+    // ✅ NEW: Check password against common patterns
+    isCommonPassword: function(password) {
+        const commonPasswords = ['password', '12345678', 'qwerty123', 'admin123'];
+        return commonPasswords.some(common =>
+            password.toLowerCase().includes(common.toLowerCase())
+        );
     }
 };
 

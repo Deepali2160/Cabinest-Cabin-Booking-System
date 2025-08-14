@@ -3,22 +3,29 @@ package com.yash.cabinbooking.daoimpl;
 import com.yash.cabinbooking.dao.UserDao;
 import com.yash.cabinbooking.model.User;
 import com.yash.cabinbooking.util.DbUtil;
+import com.yash.cabinbooking.util.PasswordUtil; // ✅ ADDED: Import PasswordUtil
+
 import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
 
 /**
- * USER DAO IMPLEMENTATION - SINGLE COMPANY VERSION
+ * USER DAO IMPLEMENTATION - SINGLE COMPANY VERSION WITH SECURE PASSWORD HASHING
  *
- * Modified for Yash Technology single company usage
- * - Enhanced error handling with safe enum conversion
+ * Enhanced Features:
+ * - BCrypt password support
+ * - Secure authentication with hash verification
+ * - Legacy password migration support
  * - Single company focused operations
  * - Improved logging and resource management
  */
 public class UserDaoImpl implements UserDao {
 
+    // ✅ LEGACY: Keep for backward compatibility (but recommend using BCrypt method)
     @Override
     public User authenticateUser(String email, String password) {
+        System.out.println("🔐 Legacy authentication for: " + email + " (Consider using BCrypt)");
+
         String sql = "SELECT user_id, name, email, password, user_type, default_company_id, status, created_at " +
                 "FROM users WHERE email = ? AND password = ? AND status = 'ACTIVE'";
 
@@ -41,15 +48,56 @@ public class UserDaoImpl implements UserDao {
 
             if (rs.next()) {
                 User user = mapResultSetToUser(rs);
-                System.out.println("✅ User authenticated successfully: " + email + " (Type: " + user.getUserType() + ")");
+                System.out.println("✅ Legacy user authenticated successfully: " + email + " (Type: " + user.getUserType() + ")");
                 return user;
             } else {
-                System.out.println("❌ Authentication failed for email: " + email);
+                System.out.println("❌ Legacy authentication failed for email: " + email);
                 return null;
             }
 
         } catch (SQLException e) {
             System.err.println("❌ SQL Error in authenticateUser: " + e.getMessage());
+            e.printStackTrace();
+            return null;
+        } finally {
+            DbUtil.closeAllResources(conn, pstmt, rs);
+        }
+    }
+
+    // ✅ NEW: Get user by email for BCrypt authentication
+    @Override
+    public User getUserByEmailForAuth(String email) {
+        System.out.println("🔐 Getting user for BCrypt authentication: " + email);
+
+        String sql = "SELECT user_id, name, email, password, user_type, default_company_id, status, created_at " +
+                "FROM users WHERE email = ? AND status = 'ACTIVE'";
+
+        Connection conn = null;
+        PreparedStatement pstmt = null;
+        ResultSet rs = null;
+
+        try {
+            conn = DbUtil.getConnection();
+            if (conn == null) {
+                System.err.println("❌ Database connection failed in getUserByEmailForAuth");
+                return null;
+            }
+
+            pstmt = conn.prepareStatement(sql);
+            pstmt.setString(1, email);
+            rs = pstmt.executeQuery();
+
+            if (rs.next()) {
+                User user = mapResultSetToUser(rs);
+                System.out.println("✅ User found for authentication: " + email);
+                return user;
+            } else {
+                System.out.println("❌ User not found or inactive: " + email);
+                return null;
+            }
+
+        } catch (SQLException e) {
+            System.err.println("❌ SQL Error in getUserByEmailForAuth: " + e.getMessage());
             e.printStackTrace();
             return null;
         } finally {
@@ -89,8 +137,11 @@ public class UserDaoImpl implements UserDao {
         return false;
     }
 
+    // ✅ ENHANCED: createUser now handles both plain text and BCrypt hashed passwords
     @Override
     public boolean createUser(User user) {
+        System.out.println("👤 Creating user: " + user.getEmail() + " with secure password");
+
         String sql = "INSERT INTO users (name, email, password, user_type, default_company_id, status) " +
                 "VALUES (?, ?, ?, ?, ?, ?)";
 
@@ -104,10 +155,17 @@ public class UserDaoImpl implements UserDao {
                 return false;
             }
 
+            // ✅ ENHANCED: Hash password if not already hashed
+            String password = user.getPassword();
+            if (!PasswordUtil.isBCryptHash(password)) {
+                System.out.println("⚠️ Plain text password detected, hashing with BCrypt");
+                password = PasswordUtil.hashPassword(password);
+            }
+
             pstmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS);
             pstmt.setString(1, user.getName());
             pstmt.setString(2, user.getEmail());
-            pstmt.setString(3, user.getPassword());
+            pstmt.setString(3, password); // ✅ Use hashed password
             pstmt.setString(4, user.getUserType().name());
             pstmt.setInt(5, user.getDefaultCompanyId());
             pstmt.setString(6, user.getStatus().name());
@@ -120,7 +178,7 @@ public class UserDaoImpl implements UserDao {
                     user.setUserId(generatedKeys.getInt(1));
                 }
 
-                System.out.println("✅ User created successfully: " + user.getEmail() +
+                System.out.println("✅ User created successfully with secure password: " + user.getEmail() +
                         " (ID: " + user.getUserId() + ", Type: " + user.getUserType() + ")");
                 return true;
             }
@@ -130,6 +188,9 @@ public class UserDaoImpl implements UserDao {
             if (e.getErrorCode() == 1062) { // Duplicate key error
                 System.err.println("🔄 Email already exists: " + user.getEmail());
             }
+            e.printStackTrace();
+        } catch (Exception e) {
+            System.err.println("❌ Error hashing password during user creation: " + e.getMessage());
             e.printStackTrace();
         } finally {
             DbUtil.closeAllResources(conn, pstmt, null);
@@ -243,7 +304,6 @@ public class UserDaoImpl implements UserDao {
         return users;
     }
 
-    // ✅ NEW: Get active users (single company)
     @Override
     public List<User> getActiveUsers() {
         String sql = "SELECT user_id, name, email, password, user_type, default_company_id, status, created_at " +
@@ -347,8 +407,11 @@ public class UserDaoImpl implements UserDao {
         return false;
     }
 
+    // ✅ ENHANCED: updateUserPassword now accepts both plain text and BCrypt hashes
     @Override
     public boolean updateUserPassword(int userId, String newPassword) {
+        System.out.println("🔑 Updating password for user: " + userId);
+
         String sql = "UPDATE users SET password = ? WHERE user_id = ?";
 
         Connection conn = null;
@@ -358,17 +421,34 @@ public class UserDaoImpl implements UserDao {
             conn = DbUtil.getConnection();
             if (conn == null) return false;
 
+            // ✅ ENHANCED: Hash password if not already hashed
+            String passwordToStore = newPassword;
+            if (!PasswordUtil.isBCryptHash(newPassword)) {
+                System.out.println("🔐 Hashing plain text password for user: " + userId);
+                passwordToStore = PasswordUtil.hashPassword(newPassword);
+            } else {
+                System.out.println("✅ BCrypt hash detected, storing directly for user: " + userId);
+            }
+
             pstmt = conn.prepareStatement(sql);
-            pstmt.setString(1, newPassword);
+            pstmt.setString(1, passwordToStore);
             pstmt.setInt(2, userId);
 
             int rowsAffected = pstmt.executeUpdate();
-            System.out.println(rowsAffected > 0 ? "✅ Password updated for user: " + userId :
-                    "❌ Password update failed for user: " + userId);
-            return rowsAffected > 0;
+
+            if (rowsAffected > 0) {
+                System.out.println("✅ Secure password updated for user: " + userId);
+                return true;
+            } else {
+                System.out.println("❌ Password update failed for user: " + userId);
+                return false;
+            }
 
         } catch (SQLException e) {
-            System.err.println("❌ Error updating password: " + e.getMessage());
+            System.err.println("❌ SQL Error updating password: " + e.getMessage());
+            e.printStackTrace();
+        } catch (Exception e) {
+            System.err.println("❌ Error hashing password: " + e.getMessage());
             e.printStackTrace();
         } finally {
             DbUtil.closeAllResources(conn, pstmt, null);
@@ -392,7 +472,6 @@ public class UserDaoImpl implements UserDao {
         return getActiveUsersByType(User.UserType.VIP);
     }
 
-    // ✅ NEW: Get admin users
     @Override
     public List<User> getAdminUsers() {
         String sql = "SELECT user_id, name, email, password, user_type, default_company_id, status, created_at " +
@@ -492,7 +571,6 @@ public class UserDaoImpl implements UserDao {
         return 0;
     }
 
-    // ✅ NEW: Get total user count
     @Override
     public int getTotalUserCount() {
         String sql = "SELECT COUNT(*) FROM users";
@@ -524,7 +602,6 @@ public class UserDaoImpl implements UserDao {
         return 0;
     }
 
-    // ✅ NEW: Get active user count
     @Override
     public int getActiveUserCount() {
         String sql = "SELECT COUNT(*) FROM users WHERE status = 'ACTIVE'";
@@ -556,7 +633,6 @@ public class UserDaoImpl implements UserDao {
         return 0;
     }
 
-    // ✅ NEW: Get all users for admin dashboard
     @Override
     public List<User> getAllUsersForAdmin() {
         String sql = "SELECT user_id, name, email, password, user_type, default_company_id, status, created_at " +
@@ -590,7 +666,6 @@ public class UserDaoImpl implements UserDao {
         return users;
     }
 
-    // ✅ NEW: Update user type
     @Override
     public boolean updateUserType(int userId, User.UserType newType) {
         String sql = "UPDATE users SET user_type = ? WHERE user_id = ?";
@@ -623,7 +698,6 @@ public class UserDaoImpl implements UserDao {
         return false;
     }
 
-    // ✅ NEW: Check if user is active
     @Override
     public boolean isUserActive(int userId) {
         String sql = "SELECT status FROM users WHERE user_id = ?";
@@ -708,5 +782,4 @@ public class UserDaoImpl implements UserDao {
         user.setCreatedAt(rs.getTimestamp("created_at"));
         return user;
     }
-
 }

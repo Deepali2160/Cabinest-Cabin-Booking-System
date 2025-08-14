@@ -14,11 +14,11 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpSession;
 import java.io.IOException;
-import java.sql.Date; // ✅ ADD THIS IMPORT
+import java.sql.Date;
 import java.util.*;
 
 /**
- * ✅ PRODUCTION READY ADMIN CONTROLLER - WITH VIP OVERRIDE & ADMIN FEATURES
+ * ✅ COMPLETE ADMIN CONTROLLER - WITH ALL ENDPOINTS FIXED
  */
 @WebServlet(urlPatterns = {
         "/admin/dashboard",
@@ -26,7 +26,14 @@ import java.util.*;
         "/admin/users",
         "/admin/bookings",
         "/admin/promote-user",
-        "/admin/demote-user"
+        "/admin/demote-user",
+        "/admin/approve-booking",    // ✅ ADDED
+        "/admin/reject-booking",     // ✅ ADDED - MAIN FIX
+        "/admin/bulk-approve",       // ✅ ADDED
+        "/admin/bulk-reject",        // ✅ ADDED
+        "/admin/force-vip-booking",  // ✅ ADDED
+        "/admin/reallocate-cabin",   // ✅ ADDED
+        "/admin/assign-cabin"        // ✅ ADDED
 })
 public class AdminController extends HttpServlet {
 
@@ -42,6 +49,7 @@ public class AdminController extends HttpServlet {
             this.userService = new UserServiceImpl();
             this.companyService = new CompanyServiceImpl();
             this.cabinService = new CabinServiceImpl();
+            System.out.println("🔧 AdminController initialized for Yash Technology - ALL ENDPOINTS LOADED");
         } catch (Exception e) {
             throw new ServletException("AdminController initialization failed", e);
         }
@@ -52,19 +60,19 @@ public class AdminController extends HttpServlet {
             throws ServletException, IOException {
 
         String servletPath = request.getServletPath();
-
-        // Extract action from servlet path
         String action = "dashboard";
         if (servletPath.startsWith("/admin/")) {
             action = servletPath.substring(7);
         }
 
-        // Check authentication
         User currentUser = getCurrentUser(request);
         if (currentUser == null || !currentUser.isAdmin()) {
+            System.out.println("🔒 Unauthorized admin access attempt");
             response.sendRedirect(request.getContextPath() + "/login");
             return;
         }
+
+        System.out.println("🌐 Admin GET Request: " + action + " by user: " + currentUser.getName());
 
         try {
             switch (action) {
@@ -72,70 +80,370 @@ public class AdminController extends HttpServlet {
                 case "":
                     showAdminDashboard(request, response, currentUser);
                     break;
-
                 case "analytics":
                     showAnalytics(request, response, currentUser);
                     break;
-
                 case "users":
                     showUserManagement(request, response, currentUser);
                     break;
-
                 case "bookings":
                     showBookingManagement(request, response, currentUser);
                     break;
-
                 case "cabins":
                     showCabinManagement(request, response, currentUser);
                     break;
-
                 case "promote-user":
                     handlePromoteUser(request, response, currentUser);
                     break;
-
                 case "demote-user":
                     handleDemoteUser(request, response, currentUser);
                     break;
-
                 default:
                     showAdminDashboard(request, response, currentUser);
                     break;
             }
         } catch (Exception e) {
+            System.err.println("❌ Error in admin GET: " + e.getMessage());
+            e.printStackTrace();
             handleError(request, response, "Error processing admin request", e);
         }
     }
 
-    // ✅ CLEAN DASHBOARD METHOD
+    // ✅ COMPLETE UPDATED POST METHOD WITH PROPER ROUTING
+    @Override
+    protected void doPost(HttpServletRequest request, HttpServletResponse response)
+            throws ServletException, IOException {
+
+        User admin = getCurrentUser(request);
+        if (admin == null || !admin.isAdmin()) {
+            System.err.println("❌ Unauthorized admin POST request");
+            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+            response.getWriter().write("{\"success\": false, \"error\": \"Unauthorized access\"}");
+            return;
+        }
+
+        // ✅ GET ACTION FROM URL PATH (NOT PARAMETER)
+        String servletPath = request.getServletPath();
+        String action = "";
+
+        if (servletPath.startsWith("/admin/")) {
+            action = servletPath.substring(7); // Remove "/admin/" prefix
+        }
+
+        System.out.println("📝 Admin POST Request: " + action + " by user: " + admin.getName());
+
+        try {
+            switch (action) {
+                case "approve-booking":
+                    handleApproveBooking(request, response, admin);
+                    break;
+                case "reject-booking":  // ✅ MAIN FIX - THIS WAS MISSING!
+                    handleRejectBooking(request, response, admin);
+                    break;
+                case "bulk-approve":
+                    handleBulkApprove(request, response, admin);
+                    break;
+                case "bulk-reject":
+                    handleBulkReject(request, response, admin);
+                    break;
+                case "force-vip-booking":
+                    handleVipForceBooking(request, response, admin);
+                    break;
+                case "reallocate-cabin":
+                    handleCabinReallocation(request, response, admin);
+                    break;
+                case "assign-cabin":
+                    handleSpecificCabinAssignment(request, response, admin);
+                    break;
+                default:
+                    // ✅ FALLBACK: Try parameter-based action for backward compatibility
+                    String paramAction = request.getParameter("action");
+                    if (paramAction != null) {
+                        handleParameterBasedAction(request, response, admin, paramAction);
+                    } else {
+                        System.err.println("❌ Unknown admin action: " + action);
+                        response.sendError(HttpServletResponse.SC_NOT_FOUND, "Action not found: " + action);
+                    }
+                    break;
+            }
+        } catch (Exception e) {
+            System.err.println("❌ Error in admin POST: " + e.getMessage());
+            e.printStackTrace();
+
+            // ✅ PROPER ERROR RESPONSE
+            if ("XMLHttpRequest".equals(request.getHeader("X-Requested-With"))) {
+                response.setContentType("application/json");
+                response.getWriter().write("{\"success\": false, \"error\": \"" + e.getMessage() + "\"}");
+            } else {
+                request.getSession().setAttribute("errorMessage", "Error: " + e.getMessage());
+                response.sendRedirect(request.getContextPath() + "/admin/bookings");
+            }
+        }
+    }
+
+    // ✅ APPROVE BOOKING HANDLER
+    private void handleApproveBooking(HttpServletRequest request, HttpServletResponse response, User admin)
+            throws ServletException, IOException {
+        System.out.println("✅ Processing booking approval by admin: " + admin.getName());
+
+        try {
+            String bookingIdStr = request.getParameter("bookingId");
+
+            if (bookingIdStr == null || bookingIdStr.trim().isEmpty()) {
+                System.err.println("❌ No booking ID provided for approval");
+                response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+                response.setContentType("application/json");
+                response.getWriter().write("{\"success\": false, \"error\": \"Booking ID required\"}");
+                return;
+            }
+
+            int bookingId = Integer.parseInt(bookingIdStr);
+            boolean success = bookingService.approveBooking(bookingId, admin.getUserId());
+
+            if (success) {
+                System.out.println("✅ Booking approved successfully: " + bookingId);
+
+                // ✅ CHECK IF AJAX REQUEST
+                if ("XMLHttpRequest".equals(request.getHeader("X-Requested-With"))) {
+                    response.setContentType("application/json");
+                    response.getWriter().write("{\"success\": true, \"message\": \"Booking approved successfully!\"}");
+                } else {
+                    request.getSession().setAttribute("successMessage", "Booking #" + bookingId + " approved successfully!");
+                    response.sendRedirect(request.getContextPath() + "/admin/bookings");
+                }
+            } else {
+                System.err.println("❌ Booking approval failed: " + bookingId);
+
+                if ("XMLHttpRequest".equals(request.getHeader("X-Requested-With"))) {
+                    response.setContentType("application/json");
+                    response.getWriter().write("{\"success\": false, \"error\": \"Approval failed\"}");
+                } else {
+                    request.getSession().setAttribute("errorMessage", "Failed to approve booking #" + bookingId);
+                    response.sendRedirect(request.getContextPath() + "/admin/bookings");
+                }
+            }
+
+        } catch (NumberFormatException e) {
+            System.err.println("❌ Invalid booking ID format: " + request.getParameter("bookingId"));
+            response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+            response.setContentType("application/json");
+            response.getWriter().write("{\"success\": false, \"error\": \"Invalid booking ID\"}");
+        } catch (Exception e) {
+            System.err.println("❌ Error approving booking: " + e.getMessage());
+            response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+            response.setContentType("application/json");
+            response.getWriter().write("{\"success\": false, \"error\": \"Server error: " + e.getMessage() + "\"}");
+        }
+    }
+
+    // ✅ REJECT BOOKING HANDLER - MAIN FIX!
+    private void handleRejectBooking(HttpServletRequest request, HttpServletResponse response, User admin)
+            throws ServletException, IOException {
+        System.out.println("❌ Processing booking rejection by admin: " + admin.getName());
+
+        try {
+            String bookingIdStr = request.getParameter("bookingId");
+            String reason = request.getParameter("reason");
+
+            if (bookingIdStr == null || bookingIdStr.trim().isEmpty()) {
+                System.err.println("❌ No booking ID provided for rejection");
+                response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+                response.setContentType("application/json");
+                response.getWriter().write("{\"success\": false, \"error\": \"Booking ID required\"}");
+                return;
+            }
+
+            int bookingId = Integer.parseInt(bookingIdStr);
+
+            // ✅ ADD REASON IF PROVIDED
+            if (reason == null || reason.trim().isEmpty()) {
+                reason = "Rejected by admin";
+            }
+
+            System.out.println("❌ Rejecting booking " + bookingId + " with reason: " + reason);
+
+            // ✅ USE PROPER SERVICE METHOD
+            boolean success = bookingService.rejectBooking(bookingId, admin.getUserId());
+
+            if (success) {
+                System.out.println("❌ Booking rejected successfully: " + bookingId);
+
+                // ✅ CHECK IF AJAX REQUEST
+                if ("XMLHttpRequest".equals(request.getHeader("X-Requested-With"))) {
+                    response.setContentType("application/json");
+                    response.getWriter().write("{\"success\": true, \"message\": \"Booking rejected successfully!\"}");
+                } else {
+                    request.getSession().setAttribute("successMessage", "Booking #" + bookingId + " rejected successfully!");
+                    response.sendRedirect(request.getContextPath() + "/admin/bookings");
+                }
+            } else {
+                System.err.println("❌ Booking rejection failed: " + bookingId);
+
+                if ("XMLHttpRequest".equals(request.getHeader("X-Requested-With"))) {
+                    response.setContentType("application/json");
+                    response.getWriter().write("{\"success\": false, \"error\": \"Rejection failed\"}");
+                } else {
+                    request.getSession().setAttribute("errorMessage", "Failed to reject booking #" + bookingId);
+                    response.sendRedirect(request.getContextPath() + "/admin/bookings");
+                }
+            }
+
+        } catch (NumberFormatException e) {
+            System.err.println("❌ Invalid booking ID format: " + request.getParameter("bookingId"));
+            response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+            response.setContentType("application/json");
+            response.getWriter().write("{\"success\": false, \"error\": \"Invalid booking ID\"}");
+        } catch (Exception e) {
+            System.err.println("❌ Error rejecting booking: " + e.getMessage());
+            e.printStackTrace();
+            response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+            response.setContentType("application/json");
+            response.getWriter().write("{\"success\": false, \"error\": \"Server error: " + e.getMessage() + "\"}");
+        }
+    }
+
+    // ✅ BULK APPROVE HANDLER
+    private void handleBulkApprove(HttpServletRequest request, HttpServletResponse response, User admin)
+            throws ServletException, IOException {
+        System.out.println("✅ Processing bulk approval by admin: " + admin.getName());
+
+        try {
+            String[] bookingIds = request.getParameterValues("bookingIds");
+            int successCount = 0;
+            int totalCount = 0;
+
+            if (bookingIds != null) {
+                totalCount = bookingIds.length;
+                for (String idStr : bookingIds) {
+                    try {
+                        int bookingId = Integer.parseInt(idStr);
+                        if (bookingService.approveBooking(bookingId, admin.getUserId())) {
+                            successCount++;
+                        }
+                    } catch (NumberFormatException e) {
+                        System.err.println("❌ Invalid booking ID in bulk: " + idStr);
+                    }
+                }
+            }
+
+            String message = "Bulk approval completed: " + successCount + "/" + totalCount + " bookings approved";
+            System.out.println("✅ " + message);
+
+            if ("XMLHttpRequest".equals(request.getHeader("X-Requested-With"))) {
+                response.setContentType("application/json");
+                response.getWriter().write("{\"success\": true, \"message\": \"" + message + "\"}");
+            } else {
+                request.getSession().setAttribute("successMessage", message);
+                response.sendRedirect(request.getContextPath() + "/admin/bookings");
+            }
+
+        } catch (Exception e) {
+            System.err.println("❌ Error in bulk approval: " + e.getMessage());
+
+            if ("XMLHttpRequest".equals(request.getHeader("X-Requested-With"))) {
+                response.setContentType("application/json");
+                response.getWriter().write("{\"success\": false, \"error\": \"Bulk approval failed\"}");
+            } else {
+                request.getSession().setAttribute("errorMessage", "Bulk approval failed");
+                response.sendRedirect(request.getContextPath() + "/admin/bookings");
+            }
+        }
+    }
+
+    // ✅ BULK REJECT HANDLER
+    private void handleBulkReject(HttpServletRequest request, HttpServletResponse response, User admin)
+            throws ServletException, IOException {
+        System.out.println("❌ Processing bulk rejection by admin: " + admin.getName());
+
+        try {
+            String[] bookingIds = request.getParameterValues("bookingIds");
+            int successCount = 0;
+            int totalCount = 0;
+
+            if (bookingIds != null) {
+                totalCount = bookingIds.length;
+                for (String idStr : bookingIds) {
+                    try {
+                        int bookingId = Integer.parseInt(idStr);
+                        if (bookingService.rejectBooking(bookingId, admin.getUserId())) {
+                            successCount++;
+                        }
+                    } catch (NumberFormatException e) {
+                        System.err.println("❌ Invalid booking ID in bulk: " + idStr);
+                    }
+                }
+            }
+
+            String message = "Bulk rejection completed: " + successCount + "/" + totalCount + " bookings rejected";
+            System.out.println("❌ " + message);
+
+            if ("XMLHttpRequest".equals(request.getHeader("X-Requested-With"))) {
+                response.setContentType("application/json");
+                response.getWriter().write("{\"success\": true, \"message\": \"" + message + "\"}");
+            } else {
+                request.getSession().setAttribute("successMessage", message);
+                response.sendRedirect(request.getContextPath() + "/admin/bookings");
+            }
+
+        } catch (Exception e) {
+            System.err.println("❌ Error in bulk rejection: " + e.getMessage());
+
+            if ("XMLHttpRequest".equals(request.getHeader("X-Requested-With"))) {
+                response.setContentType("application/json");
+                response.getWriter().write("{\"success\": false, \"error\": \"Bulk rejection failed\"}");
+            } else {
+                request.getSession().setAttribute("errorMessage", "Bulk rejection failed");
+                response.sendRedirect(request.getContextPath() + "/admin/bookings");
+            }
+        }
+    }
+
+    // ✅ PARAMETER-BASED ACTION HANDLER (BACKWARD COMPATIBILITY)
+    private void handleParameterBasedAction(HttpServletRequest request, HttpServletResponse response,
+                                            User admin, String action) throws ServletException, IOException {
+        System.out.println("🔄 Handling parameter-based action: " + action);
+
+        if ("approve".equals(action)) {
+            handleApproveBooking(request, response, admin);
+        } else if ("reject".equals(action)) {
+            handleRejectBooking(request, response, admin);
+        } else if ("bulkApprove".equals(action)) {
+            handleBulkApprove(request, response, admin);
+        } else if ("bulkReject".equals(action)) {
+            handleBulkReject(request, response, admin);
+        } else if ("forceVipBooking".equals(action)) {
+            handleVipForceBooking(request, response, admin);
+        } else if ("reallocateCabin".equals(action)) {
+            handleCabinReallocation(request, response, admin);
+        } else if ("assignSpecificCabin".equals(action)) {
+            handleSpecificCabinAssignment(request, response, admin);
+        } else {
+            response.sendError(HttpServletResponse.SC_NOT_FOUND, "Unknown action: " + action);
+        }
+    }
+
+    // ✅ EXISTING METHODS (UNCHANGED) - DASHBOARD
     private void showAdminDashboard(HttpServletRequest request, HttpServletResponse response, User admin)
             throws ServletException, IOException {
 
         try {
-            // Get all bookings for dashboard data
             List<Booking> allBookings = bookingService.getAllBookings();
             List<Booking> recentBookings = new ArrayList<>();
             List<Booking> pendingBookings = new ArrayList<>();
             List<Booking> vipBookings = new ArrayList<>();
 
-            // Process all bookings
             for (Booking booking : allBookings) {
-                // Collect pending bookings
                 if (booking.getStatus() == Booking.Status.PENDING) {
                     pendingBookings.add(booking);
                 }
-
-                // Collect VIP bookings
                 if (booking.getPriorityLevel() == Booking.PriorityLevel.VIP) {
                     vipBookings.add(booking);
                 }
-
-                // Get recent bookings (latest 5)
                 if (recentBookings.size() < 5) {
                     recentBookings.add(booking);
                 }
             }
 
-            // Get user analytics
             List<User> allUsers = userService.getAllUsers();
             int normalUsers = 0, vipUsers = 0, adminUsers = 0;
 
@@ -149,7 +457,6 @@ public class AdminController extends HttpServlet {
                 }
             }
 
-            // Set all required attributes for dashboard
             request.setAttribute("admin", admin);
             request.setAttribute("totalUsers", allUsers.size());
             request.setAttribute("totalCabins", cabinService.getTotalCabinCount());
@@ -157,13 +464,9 @@ public class AdminController extends HttpServlet {
             request.setAttribute("recentBookings", recentBookings);
             request.setAttribute("pendingCount", pendingBookings.size());
             request.setAttribute("vipBookings", vipBookings);
-
-            // User distribution for sidebar
             request.setAttribute("normalUsers", normalUsers);
             request.setAttribute("vipUsers", vipUsers);
             request.setAttribute("adminUsers", adminUsers);
-
-            // Cabin stats for sidebar
             request.setAttribute("activeCabins", cabinService.getTotalCabinCount());
             request.setAttribute("vipCabins", 0);
             request.setAttribute("maintenanceCabins", 0);
@@ -175,30 +478,25 @@ public class AdminController extends HttpServlet {
         }
     }
 
-    // ✅ CLEAN BOOKING MANAGEMENT METHOD
+    // ✅ EXISTING METHODS (UNCHANGED) - BOOKING MANAGEMENT
     private void showBookingManagement(HttpServletRequest request, HttpServletResponse response, User admin)
             throws ServletException, IOException {
 
         try {
-            // Get filter parameter
             String filter = request.getParameter("filter");
             if (filter == null || filter.isEmpty()) {
-                filter = "pending"; // Default to pending bookings
+                filter = "pending";
             }
 
-            // Get all bookings from service
             List<Booking> allBookings = bookingService.getAllBookings();
             List<Booking> filteredBookings = new ArrayList<>();
 
-            // Initialize counters for filter tabs
             int pendingCount = 0;
             int approvedCount = 0;
             int rejectedCount = 0;
             int vipCount = 0;
 
-            // Process all bookings for filtering and counting
             for (Booking booking : allBookings) {
-                // Count bookings by status
                 if (booking.getStatus() == Booking.Status.PENDING) {
                     pendingCount++;
                 } else if (booking.getStatus() == Booking.Status.APPROVED) {
@@ -207,12 +505,10 @@ public class AdminController extends HttpServlet {
                     rejectedCount++;
                 }
 
-                // Count VIP priority bookings
                 if (booking.getPriorityLevel() == Booking.PriorityLevel.VIP) {
                     vipCount++;
                 }
 
-                // Apply selected filter
                 switch (filter) {
                     case "pending":
                         if (booking.getStatus() == Booking.Status.PENDING) {
@@ -241,7 +537,6 @@ public class AdminController extends HttpServlet {
                 }
             }
 
-            // Set all required attributes
             request.setAttribute("admin", admin);
             request.setAttribute("bookings", filteredBookings);
             request.setAttribute("pendingCount", pendingCount);
@@ -258,24 +553,19 @@ public class AdminController extends HttpServlet {
         }
     }
 
-    // ✅ ENHANCED USER MANAGEMENT METHOD WITH PROPER DATA
+    // ✅ ALL OTHER EXISTING METHODS - KEEP AS THEY WERE
+
     private void showUserManagement(HttpServletRequest request, HttpServletResponse response, User admin)
             throws ServletException, IOException {
 
         try {
-            // Get all users
             List<User> allUsers = userService.getAllUsers();
-
-            // Separate users by type for easier JSP processing
             List<User> normalUsers = new ArrayList<>();
             List<User> vipUsers = new ArrayList<>();
             List<User> adminUsers = new ArrayList<>();
-
-            // Get user booking counts (if method exists in service)
             Map<Integer, Integer> userBookingCounts = new HashMap<>();
 
             for (User user : allUsers) {
-                // Categorize users
                 if (user.isAdmin()) {
                     adminUsers.add(user);
                 } else if (user.isVIP()) {
@@ -284,7 +574,6 @@ public class AdminController extends HttpServlet {
                     normalUsers.add(user);
                 }
 
-                // Get booking count for each user (you may need to implement this method)
                 try {
                     int bookingCount = bookingService.getBookingCountByUserId(user.getUserId());
                     userBookingCounts.put(user.getUserId(), bookingCount);
@@ -293,7 +582,6 @@ public class AdminController extends HttpServlet {
                 }
             }
 
-            // Set all required attributes
             request.setAttribute("admin", admin);
             request.setAttribute("allUsers", allUsers);
             request.setAttribute("normalUsers", normalUsers);
@@ -309,22 +597,18 @@ public class AdminController extends HttpServlet {
         }
     }
 
-    // ✅ CLEAN ANALYTICS METHOD
-    // ✅ ENHANCED ANALYTICS METHOD WITH PROPER CALCULATIONS
     private void showAnalytics(HttpServletRequest request, HttpServletResponse response, User admin)
             throws ServletException, IOException {
 
         try {
-            // USER ANALYTICS
             List<User> allUsers = userService.getAllUsers();
             int totalUsers = allUsers.size();
             int normalUsers = 0;
             int vipUsers = 0;
             int adminUsers = 0;
-            int activeUsers = 0; // ✅ ADDED: Active users count
+            int activeUsers = 0;
 
             for (User user : allUsers) {
-                // Count by user type
                 if (user.isAdmin()) {
                     adminUsers++;
                 } else if (user.isVIP()) {
@@ -333,23 +617,28 @@ public class AdminController extends HttpServlet {
                     normalUsers++;
                 }
 
-                // ✅ ADDED: Count active users
                 if (user.getStatus() == User.Status.ACTIVE) {
                     activeUsers++;
                 }
             }
 
-            // BOOKING ANALYTICS
             List<Booking> allBookings = bookingService.getAllBookings();
             int totalBookings = allBookings.size();
             int approvedBookings = 0;
             int pendingBookings = 0;
             int rejectedBookings = 0;
-            int vipBookings = 0; // ✅ ADDED: VIP bookings count
-            int todaysBookings = 0; // ✅ ADDED: Today's bookings
+            int vipBookings = 0;
 
-            // ✅ ADDED: Get today's date for filtering
-            Date today = new Date(System.currentTimeMillis());
+            // ✅ MAIN FIX: Proper today's date calculation
+            int todaysBookings = 0;
+            int todayApprovals = 0;
+
+            // ✅ Get today's date properly (date only, no time)
+            java.time.LocalDate today = java.time.LocalDate.now(java.time.ZoneId.of("Asia/Kolkata"));
+            java.sql.Date todayDate = java.sql.Date.valueOf(today);
+
+            System.out.println("📅 Today's date for analytics: " + todayDate);
+            System.out.println("🌍 Current timezone: Asia/Kolkata");
 
             for (Booking booking : allBookings) {
                 // Count by status
@@ -361,103 +650,111 @@ public class AdminController extends HttpServlet {
                     rejectedBookings++;
                 }
 
-                // ✅ ADDED: Count VIP priority bookings
+                // Count VIP bookings
                 if (booking.getPriorityLevel() == Booking.PriorityLevel.VIP) {
                     vipBookings++;
                 }
 
-                // ✅ ADDED: Count today's bookings
-                if (booking.getBookingDate() != null && booking.getBookingDate().equals(today)) {
-                    todaysBookings++;
+                // ✅ FIXED: Today's bookings calculation
+                if (booking.getBookingDate() != null) {
+                    // Convert booking date to LocalDate for comparison
+                    java.time.LocalDate bookingLocalDate = booking.getBookingDate().toLocalDate();
+
+                    if (bookingLocalDate.equals(today)) {
+                        todaysBookings++;
+                        System.out.println("📅 Found today's booking: " + booking.getBookingId() +
+                                " for date: " + booking.getBookingDate());
+                    }
+                }
+
+                // ✅ FIXED: Today's approvals calculation
+                if (booking.getApprovedAt() != null) {
+                    java.time.LocalDate approvalDate = booking.getApprovedAt().toLocalDateTime().toLocalDate();
+                    if (approvalDate.equals(today)) {
+                        todayApprovals++;
+                    }
                 }
             }
 
-            // ✅ ADDED: Calculate approval rate percentage
+            // Calculate rates
             double approvalRate = 0.0;
             if (totalBookings > 0) {
                 approvalRate = (approvedBookings * 100.0) / totalBookings;
             }
 
-            // ✅ ADDED: Calculate rejection rate percentage
             double rejectionRate = 0.0;
             if (totalBookings > 0) {
                 rejectionRate = (rejectedBookings * 100.0) / totalBookings;
             }
 
-            // ✅ ADDED: Calculate VIP booking percentage
             double vipBookingRate = 0.0;
             if (totalBookings > 0) {
                 vipBookingRate = (vipBookings * 100.0) / totalBookings;
             }
 
-            // CABIN ANALYTICS
+            // Cabin statistics
             int totalCabins = cabinService.getTotalCabinCount();
-            int activeCabins = cabinService.getActiveCabinCount(); // ✅ ADDED: Use proper method
+            int activeCabins = cabinService.getActiveCabinCount();
             List<Cabin> vipCabinList = cabinService.getVIPCabins();
             int vipCabins = vipCabinList.size();
-
-            // ✅ ADDED: Calculate maintenance cabins
             int maintenanceCabins = totalCabins - activeCabins;
 
-            // ✅ ADDED: Calculate utilization rate
             double utilizationRate = 0.0;
             if (totalCabins > 0) {
-                utilizationRate = (approvedBookings * 100.0) / (totalCabins * 30); // Assuming 30 days average
+                utilizationRate = (approvedBookings * 100.0) / (totalCabins * 30);
             }
 
-            // ✅ ADDED: Popular time slots from service
             List<String> popularTimeSlots = bookingService.getPopularTimeSlots();
             if (popularTimeSlots.isEmpty()) {
                 popularTimeSlots = Arrays.asList("09:00-10:00", "10:00-11:00", "11:00-12:00", "14:00-15:00", "15:00-16:00");
             }
 
-            // ✅ ADDED: System health metrics
             Map<String, Object> systemMetrics = new HashMap<>();
             systemMetrics.put("averageBookingsPerUser", totalUsers > 0 ? (double) totalBookings / totalUsers : 0.0);
             systemMetrics.put("cabinUtilizationRate", utilizationRate);
             systemMetrics.put("vipUserPercentage", totalUsers > 0 ? (vipUsers * 100.0) / totalUsers : 0.0);
             systemMetrics.put("adminUserPercentage", totalUsers > 0 ? (adminUsers * 100.0) / totalUsers : 0.0);
 
-            // SET ALL REQUEST ATTRIBUTES
-            request.setAttribute("admin", admin);
+            // ✅ ENHANCED: Debug logging
+            System.out.println("📊 Analytics Summary:");
+            System.out.println("   - Total Bookings: " + totalBookings);
+            System.out.println("   - Today's Date: " + todayDate);
+            System.out.println("   - Today's Bookings: " + todaysBookings);
+            System.out.println("   - Today's Approvals: " + todayApprovals);
+            System.out.println("   - Pending Bookings: " + pendingBookings);
 
-            // User Analytics
+            // Set attributes
+            request.setAttribute("admin", admin);
             request.setAttribute("totalUsers", totalUsers);
             request.setAttribute("normalUsers", normalUsers);
             request.setAttribute("vipUsers", vipUsers);
             request.setAttribute("adminUsers", adminUsers);
-            request.setAttribute("activeUsers", activeUsers); // ✅ FIXED: Active users
-
-            // Booking Analytics
+            request.setAttribute("activeUsers", activeUsers);
             request.setAttribute("totalBookings", totalBookings);
             request.setAttribute("approvedBookings", approvedBookings);
             request.setAttribute("pendingBookings", pendingBookings);
             request.setAttribute("rejectedBookings", rejectedBookings);
-            request.setAttribute("vipBookings", vipBookings); // ✅ FIXED: VIP bookings count
-            request.setAttribute("todaysBookings", todaysBookings); // ✅ ADDED: Today's activity
+            request.setAttribute("vipBookings", vipBookings);
 
-            // ✅ FIXED: Percentage calculations
-            request.setAttribute("approvalRate", Math.round(approvalRate * 100.0) / 100.0); // Round to 2 decimal places
+            // ✅ MAIN FIX: Correct today's activity data
+            request.setAttribute("todaysBookings", todaysBookings);  // ✅ Fixed
+            request.setAttribute("todayBookings", todaysBookings);    // ✅ Alternative name
+            request.setAttribute("todayApprovals", todayApprovals);   // ✅ New field
+
+            request.setAttribute("approvalRate", Math.round(approvalRate * 100.0) / 100.0);
             request.setAttribute("rejectionRate", Math.round(rejectionRate * 100.0) / 100.0);
             request.setAttribute("vipBookingRate", Math.round(vipBookingRate * 100.0) / 100.0);
-
-            // Cabin Analytics
             request.setAttribute("totalCabins", totalCabins);
             request.setAttribute("activeCabins", activeCabins);
             request.setAttribute("vipCabins", vipCabins);
             request.setAttribute("maintenanceCabins", maintenanceCabins);
-
-            // Enhanced Analytics
             request.setAttribute("popularTimeSlots", popularTimeSlots);
             request.setAttribute("systemMetrics", systemMetrics);
             request.setAttribute("utilizationRate", Math.round(utilizationRate * 100.0) / 100.0);
 
-            System.out.println("📊 Analytics calculated:");
-            System.out.println("   - Total Users: " + totalUsers + " (Active: " + activeUsers + ")");
-            System.out.println("   - Total Bookings: " + totalBookings + " (Approved: " + approvedBookings + ")");
-            System.out.println("   - Approval Rate: " + approvalRate + "%");
-            System.out.println("   - VIP Bookings: " + vipBookings);
-            System.out.println("   - Today's Bookings: " + todaysBookings);
+            // ✅ NEW: Add current timestamp for JSP
+            request.setAttribute("now", new java.util.Date());
+            request.setAttribute("currentDate", todayDate);
 
             request.getRequestDispatcher("/admin/analytics.jsp").forward(request, response);
 
@@ -469,7 +766,6 @@ public class AdminController extends HttpServlet {
     }
 
 
-    // ✅ CLEAN CABIN MANAGEMENT METHOD
     private void showCabinManagement(HttpServletRequest request, HttpServletResponse response, User admin)
             throws ServletException, IOException {
 
@@ -485,12 +781,11 @@ public class AdminController extends HttpServlet {
         }
     }
 
-    // ✅ NEW PROMOTE USER METHOD
     private void handlePromoteUser(HttpServletRequest request, HttpServletResponse response, User admin)
             throws ServletException, IOException {
 
         String userId = request.getParameter("userId");
-        String newRole = request.getParameter("role"); // vip या admin
+        String newRole = request.getParameter("role");
 
         if (userId != null && !userId.isEmpty() && newRole != null) {
             try {
@@ -529,11 +824,9 @@ public class AdminController extends HttpServlet {
                     "Missing required parameters!");
         }
 
-        // Redirect back to user management
         response.sendRedirect(request.getContextPath() + "/admin/users");
     }
 
-    // ✅ NEW DEMOTE USER METHOD
     private void handleDemoteUser(HttpServletRequest request, HttpServletResponse response, User admin)
             throws ServletException, IOException {
 
@@ -563,120 +856,7 @@ public class AdminController extends HttpServlet {
         response.sendRedirect(request.getContextPath() + "/admin/users");
     }
 
-    // ✅ ENHANCED POST METHOD WITH PROPER REDIRECTS
-    @Override
-    protected void doPost(HttpServletRequest request, HttpServletResponse response)
-            throws ServletException, IOException {
-
-        String action = request.getParameter("action");
-        User admin = getCurrentUser(request);
-
-        if (admin == null || !admin.isAdmin()) {
-            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-            return;
-        }
-
-        try {
-            if ("approve".equals(action)) {
-                int bookingId = Integer.parseInt(request.getParameter("bookingId"));
-                boolean success = bookingService.approveBooking(bookingId, admin.getUserId());
-
-                if (success) {
-                    request.getSession().setAttribute("successMessage",
-                            "Booking #" + bookingId + " approved successfully!");
-                } else {
-                    request.getSession().setAttribute("errorMessage",
-                            "Failed to approve booking #" + bookingId);
-                }
-
-                response.sendRedirect(request.getContextPath() + "/admin/bookings");
-                return;
-
-            } else if ("reject".equals(action)) {
-                int bookingId = Integer.parseInt(request.getParameter("bookingId"));
-                boolean success = bookingService.rejectBooking(bookingId, admin.getUserId());
-
-                if (success) {
-                    request.getSession().setAttribute("successMessage",
-                            "Booking #" + bookingId + " rejected successfully!");
-                } else {
-                    request.getSession().setAttribute("errorMessage",
-                            "Failed to reject booking #" + bookingId);
-                }
-
-                response.sendRedirect(request.getContextPath() + "/admin/bookings");
-                return;
-
-            } else if ("bulkApprove".equals(action)) {
-                String[] bookingIds = request.getParameterValues("bookingIds");
-                int successCount = 0;
-
-                if (bookingIds != null) {
-                    for (String idStr : bookingIds) {
-                        try {
-                            int bookingId = Integer.parseInt(idStr);
-                            if (bookingService.approveBooking(bookingId, admin.getUserId())) {
-                                successCount++;
-                            }
-                        } catch (NumberFormatException e) {
-                            // Log invalid booking ID but continue processing
-                        }
-                    }
-                }
-
-                request.getSession().setAttribute("successMessage",
-                        "Bulk approve completed: " + successCount + " bookings approved");
-                response.sendRedirect(request.getContextPath() + "/admin/bookings");
-                return;
-
-            } else if ("bulkReject".equals(action)) {
-                String[] bookingIds = request.getParameterValues("bookingIds");
-                int successCount = 0;
-
-                if (bookingIds != null) {
-                    for (String idStr : bookingIds) {
-                        try {
-                            int bookingId = Integer.parseInt(idStr);
-                            if (bookingService.rejectBooking(bookingId, admin.getUserId())) {
-                                successCount++;
-                            }
-                        } catch (NumberFormatException e) {
-                            // Log invalid booking ID but continue processing
-                        }
-                    }
-                }
-
-                request.getSession().setAttribute("successMessage",
-                        "Bulk reject completed: " + successCount + " bookings rejected");
-                response.sendRedirect(request.getContextPath() + "/admin/bookings");
-                return;
-
-            } else if ("forceVipBooking".equals(action)) {
-                handleVipForceBooking(request, response, admin);
-                return;
-
-            } else if ("reallocateCabin".equals(action)) {
-                handleCabinReallocation(request, response, admin);
-                return;
-
-            } else if ("assignSpecificCabin".equals(action)) {
-                handleSpecificCabinAssignment(request, response, admin);
-                return;
-
-            } else {
-                request.getSession().setAttribute("errorMessage", "Unknown action requested");
-                response.sendRedirect(request.getContextPath() + "/admin/bookings");
-            }
-
-        } catch (Exception e) {
-            request.getSession().setAttribute("errorMessage", "Error processing request: " + e.getMessage());
-            response.sendRedirect(request.getContextPath() + "/admin/bookings");
-        }
-    }
-
-    // 🎯 NEW METHODS FOR YOUR 3 REQUIREMENTS:
-
-    // ⭐ REQUIREMENT 1: VIP Force Booking Handler
+    // ✅ VIP FORCE BOOKING HANDLER
     private void handleVipForceBooking(HttpServletRequest request, HttpServletResponse response, User admin)
             throws ServletException, IOException {
 
@@ -689,7 +869,6 @@ public class AdminController extends HttpServlet {
 
             Date bookingDate = Date.valueOf(dateStr);
 
-            // Get VIP user
             User vipUser = userService.getUserById(vipUserId);
             if (vipUser == null || !vipUser.isVIP()) {
                 request.getSession().setAttribute("errorMessage", "Invalid VIP user!");
@@ -697,7 +876,6 @@ public class AdminController extends HttpServlet {
                 return;
             }
 
-            // Create VIP booking
             Booking vipBooking = new Booking();
             vipBooking.setUserId(vipUserId);
             vipBooking.setCabinId(cabinId);
@@ -723,7 +901,7 @@ public class AdminController extends HttpServlet {
         response.sendRedirect(request.getContextPath() + "/admin/bookings");
     }
 
-    // 👨💼 REQUIREMENT 2: Cabin Reallocation Handler
+    // ✅ CABIN REALLOCATION HANDLER
     private void handleCabinReallocation(HttpServletRequest request, HttpServletResponse response, User admin)
             throws ServletException, IOException {
 
@@ -754,7 +932,7 @@ public class AdminController extends HttpServlet {
         response.sendRedirect(request.getContextPath() + "/admin/bookings");
     }
 
-    // 🎯 REQUIREMENT 3: Specific Cabin Assignment Handler
+    // ✅ SPECIFIC CABIN ASSIGNMENT HANDLER
     private void handleSpecificCabinAssignment(HttpServletRequest request, HttpServletResponse response, User admin)
             throws ServletException, IOException {
 
@@ -798,6 +976,8 @@ public class AdminController extends HttpServlet {
 
     private void handleError(HttpServletRequest request, HttpServletResponse response,
                              String message, Exception e) throws ServletException, IOException {
+        System.err.println("❌ AdminController Error: " + message);
+        e.printStackTrace();
         request.setAttribute("error", message);
         request.getRequestDispatcher("/admin/error.jsp").forward(request, response);
     }

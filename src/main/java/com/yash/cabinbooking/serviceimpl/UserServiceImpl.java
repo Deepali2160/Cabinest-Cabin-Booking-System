@@ -5,6 +5,7 @@ import com.yash.cabinbooking.dao.UserDao;
 import com.yash.cabinbooking.daoimpl.UserDaoImpl;
 import com.yash.cabinbooking.model.User;
 import com.yash.cabinbooking.util.DbUtil;
+import com.yash.cabinbooking.util.PasswordUtil; // ✅ ADDED: Import PasswordUtil
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -13,11 +14,13 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * USER SERVICE IMPLEMENTATION - SINGLE COMPANY VERSION
+ * USER SERVICE IMPLEMENTATION - SINGLE COMPANY VERSION WITH SECURE PASSWORD HASHING
  *
- * Modified for Yash Technology single company usage
- * - Enhanced business logic with single company focus
- * - Improved validation and security
+ * Enhanced Features:
+ * - BCrypt password hashing and verification
+ * - Secure user authentication
+ * - Single company focus for Yash Technology
+ * - Enhanced business logic with security
  * - AdminController integration support
  */
 public class UserServiceImpl implements UserService {
@@ -27,16 +30,17 @@ public class UserServiceImpl implements UserService {
     // ✅ SINGLE COMPANY: Static constants
     private static final int DEFAULT_COMPANY_ID = 1;
     private static final String COMPANY_NAME = "Yash Technology";
-    private static final int MIN_PASSWORD_LENGTH = 6;
+    private static final int MIN_PASSWORD_LENGTH = 8; // ✅ ENHANCED: Increased to 8 for better security
 
     public UserServiceImpl() {
         this.userDAO = new UserDaoImpl();
-        System.out.println("🔧 UserService initialized for " + COMPANY_NAME + " (Single Company)");
+        System.out.println("🔧 UserService initialized for " + COMPANY_NAME + " (Single Company) with BCrypt Security");
     }
 
+    // ✅ LEGACY: Keep old method for backward compatibility (will be deprecated)
     @Override
     public User authenticateUser(String email, String password) {
-        System.out.println("🔐 Authenticating user: " + email);
+        System.out.println("🔐 Legacy authentication for user: " + email + " (Consider using BCrypt method)");
 
         // Input validation
         if (email == null || email.trim().isEmpty() || password == null || password.trim().isEmpty()) {
@@ -48,7 +52,7 @@ public class UserServiceImpl implements UserService {
         User user = userDAO.authenticateUser(email.trim().toLowerCase(), password);
 
         if (user != null) {
-            System.out.println("✅ User authenticated successfully: " + user.getName() +
+            System.out.println("✅ Legacy user authenticated successfully: " + user.getName() +
                     " (" + user.getUserTypeDisplay() + ") - " + COMPANY_NAME);
             return user;
         } else {
@@ -57,9 +61,69 @@ public class UserServiceImpl implements UserService {
         }
     }
 
+    // ✅ NEW: Secure BCrypt authentication method
+    @Override
+    public User authenticateUserWithHashedPassword(String email, String password) {
+        System.out.println("🔐 Secure BCrypt authentication for user: " + email);
+
+        // Input validation
+        if (email == null || email.trim().isEmpty() || password == null || password.trim().isEmpty()) {
+            System.err.println("❌ Invalid login credentials provided");
+            return null;
+        }
+
+        try {
+            // Get user by email first
+            User user = userDAO.getUserByEmail(email.trim().toLowerCase());
+
+            if (user == null) {
+                System.out.println("❌ User not found with email: " + email);
+                return null;
+            }
+
+            // Verify password using BCrypt
+            String storedHash = user.getPassword();
+
+            // Check if stored password is already a BCrypt hash
+            if (PasswordUtil.isBCryptHash(storedHash)) {
+                // Verify using BCrypt
+                boolean passwordMatches = PasswordUtil.verifyPassword(password, storedHash);
+
+                if (passwordMatches) {
+                    System.out.println("✅ BCrypt authentication successful for: " + user.getName() +
+                            " (" + user.getUserTypeDisplay() + ") - " + COMPANY_NAME);
+                    return user;
+                } else {
+                    System.out.println("❌ BCrypt authentication failed - password mismatch for: " + email);
+                    return null;
+                }
+            } else {
+                // Legacy plain text password - migrate to BCrypt
+                if (storedHash.equals(password)) {
+                    System.out.println("⚠️ Legacy password authentication successful - migrating to BCrypt for: " + user.getName());
+
+                    // Automatically upgrade to BCrypt
+                    String hashedPassword = PasswordUtil.hashPassword(password);
+                    userDAO.updateUserPassword(user.getUserId(), hashedPassword);
+
+                    System.out.println("✅ Password migrated to BCrypt for user: " + user.getName());
+                    return user;
+                } else {
+                    System.out.println("❌ Legacy authentication failed for: " + email);
+                    return null;
+                }
+            }
+
+        } catch (Exception e) {
+            System.err.println("❌ Error during BCrypt authentication: " + e.getMessage());
+            e.printStackTrace();
+            return null;
+        }
+    }
+
     @Override
     public boolean registerUser(User user) {
-        System.out.println("📝 Registering new user: " + user.getEmail() + " for " + COMPANY_NAME);
+        System.out.println("📝 Registering new user with secure password: " + user.getEmail() + " for " + COMPANY_NAME);
 
         // Input validation
         if (!isValidUserData(user)) {
@@ -71,6 +135,19 @@ public class UserServiceImpl implements UserService {
         if (!isEmailAvailable(user.getEmail())) {
             System.err.println("❌ Email already exists: " + user.getEmail());
             return false;
+        }
+
+        // ✅ SECURITY ENHANCEMENT: Hash password if not already hashed
+        String password = user.getPassword();
+        if (!PasswordUtil.isBCryptHash(password)) {
+            try {
+                String hashedPassword = PasswordUtil.hashPassword(password);
+                user.setPassword(hashedPassword);
+                System.out.println("🔐 Password hashed successfully for registration: " + user.getName());
+            } catch (Exception e) {
+                System.err.println("❌ Password hashing failed during registration: " + e.getMessage());
+                return false;
+            }
         }
 
         // ✅ SINGLE COMPANY: Set default values for new user
@@ -91,7 +168,7 @@ public class UserServiceImpl implements UserService {
         boolean success = userDAO.createUser(user);
 
         if (success) {
-            System.out.println("✅ User registered successfully: " + user.getName() +
+            System.out.println("✅ User registered successfully with secure password: " + user.getName() +
                     " (ID: " + user.getUserId() + ", Company: " + COMPANY_NAME + ")");
         } else {
             System.err.println("❌ User registration failed for: " + user.getEmail());
@@ -149,7 +226,6 @@ public class UserServiceImpl implements UserService {
         return userDAO.getAllUsers();
     }
 
-    // ✅ NEW: Get active users (single company)
     @Override
     public List<User> getActiveUsers() {
         System.out.println("📋 Fetching active users for " + COMPANY_NAME);
@@ -182,9 +258,10 @@ public class UserServiceImpl implements UserService {
         return success;
     }
 
+    // ✅ LEGACY: Keep old method for backward compatibility
     @Override
     public boolean changePassword(int userId, String oldPassword, String newPassword) {
-        System.out.println("🔑 Changing password for user: " + userId);
+        System.out.println("🔑 Legacy password change for user: " + userId + " (Consider using BCrypt method)");
 
         // Enhanced input validation
         if (userId <= 0 || oldPassword == null || newPassword == null ||
@@ -218,6 +295,70 @@ public class UserServiceImpl implements UserService {
         return success;
     }
 
+    // ✅ NEW: Secure password change with BCrypt
+    @Override
+    public boolean changePasswordWithHash(int userId, String oldPassword, String newPassword) {
+        System.out.println("🔑 Secure password change with BCrypt for user: " + userId);
+
+        // Enhanced input validation
+        if (userId <= 0 || oldPassword == null || newPassword == null ||
+                newPassword.length() < MIN_PASSWORD_LENGTH) {
+            System.err.println("❌ Invalid password change request - Password must be at least " + MIN_PASSWORD_LENGTH + " characters");
+            return false;
+        }
+
+        // Enhanced password strength validation
+        if (!PasswordUtil.isStrongPassword(newPassword)) {
+            System.err.println("❌ New password does not meet strength requirements");
+            return false;
+        }
+
+        try {
+            // Get current user
+            User user = userDAO.getUserById(userId);
+            if (user == null) {
+                System.err.println("❌ User not found for password change: " + userId);
+                return false;
+            }
+
+            String currentHashedPassword = user.getPassword();
+
+            // Verify old password
+            boolean oldPasswordValid = false;
+            if (PasswordUtil.isBCryptHash(currentHashedPassword)) {
+                // Verify using BCrypt
+                oldPasswordValid = PasswordUtil.verifyPassword(oldPassword, currentHashedPassword);
+            } else {
+                // Legacy plain text verification
+                oldPasswordValid = currentHashedPassword.equals(oldPassword);
+            }
+
+            if (!oldPasswordValid) {
+                System.err.println("❌ Old password verification failed for user: " + userId);
+                return false;
+            }
+
+            // Hash new password
+            String newHashedPassword = PasswordUtil.hashPassword(newPassword);
+
+            // Update password in database
+            boolean success = userDAO.updateUserPassword(userId, newHashedPassword);
+
+            if (success) {
+                System.out.println("✅ Secure password changed successfully for user: " + userId);
+            } else {
+                System.err.println("❌ Secure password change failed for user: " + userId);
+            }
+
+            return success;
+
+        } catch (Exception e) {
+            System.err.println("❌ Error during secure password change: " + e.getMessage());
+            e.printStackTrace();
+            return false;
+        }
+    }
+
     @Override
     public boolean promoteToVIP(int userId) {
         System.out.println("⭐ Promoting user to VIP: " + userId);
@@ -230,7 +371,6 @@ public class UserServiceImpl implements UserService {
         return updateUserType(userId, User.UserType.ADMIN);
     }
 
-    // ✅ NEW: Generic user type update method
     @Override
     public boolean updateUserType(int userId, User.UserType newType) {
         System.out.println("🔄 Updating user type to " + newType + " for user: " + userId);
@@ -283,7 +423,6 @@ public class UserServiceImpl implements UserService {
         return userDAO.getVIPUsers();
     }
 
-    // ✅ NEW: Get admin users
     @Override
     public List<User> getAdminUsers() {
         System.out.println("👨‍💼 Fetching all admin users for " + COMPANY_NAME);
@@ -313,7 +452,6 @@ public class UserServiceImpl implements UserService {
         return canAccess;
     }
 
-    // ✅ NEW: AdminController support methods
     @Override
     public int getTotalUserCount() {
         System.out.println("📊 Getting total user count for " + COMPANY_NAME);
@@ -338,7 +476,6 @@ public class UserServiceImpl implements UserService {
         return userDAO.isUserActive(userId);
     }
 
-    // ✅ NEW: Get users by type
     @Override
     public List<User> getUsersByType(User.UserType userType) {
         System.out.println("📋 Fetching users by type: " + userType);
@@ -351,7 +488,6 @@ public class UserServiceImpl implements UserService {
         return userDAO.getActiveUsersByType(userType);
     }
 
-    // ✅ NEW: Enhanced permission validation
     @Override
     public boolean validateUserPermissions(User user, String permission) {
         if (user == null || permission == null) {
@@ -374,6 +510,70 @@ public class UserServiceImpl implements UserService {
             default:
                 System.err.println("❌ Unknown permission: " + permission);
                 return false;
+        }
+    }
+
+    @Override
+    public boolean demoteUser(int userId) {
+        try {
+            System.out.println("📉 Demoting user to NORMAL: " + userId);
+
+            // Update user type to NORMAL in database
+            String sql = "UPDATE users SET user_type = 'NORMAL' WHERE user_id = ?";
+
+            Connection connection = DbUtil.getConnection();
+            PreparedStatement statement = connection.prepareStatement(sql);
+            statement.setInt(1, userId);
+
+            int rowsAffected = statement.executeUpdate();
+
+            statement.close();
+            connection.close();
+
+            if (rowsAffected > 0) {
+                System.out.println("✅ User demoted successfully: " + userId);
+                return true;
+            } else {
+                System.err.println("❌ User demotion failed: " + userId);
+                return false;
+            }
+
+        } catch (Exception e) {
+            System.err.println("❌ Error demoting user: " + e.getMessage());
+            e.printStackTrace();
+            return false;
+        }
+    }
+
+    @Override
+    public int getBookingCountByUserId(int userId) {
+        try {
+            System.out.println("📊 Getting booking count for user: " + userId);
+
+            String sql = "SELECT COUNT(*) FROM bookings WHERE user_id = ?";
+
+            Connection connection = DbUtil.getConnection();
+            PreparedStatement statement = connection.prepareStatement(sql);
+            statement.setInt(1, userId);
+
+            ResultSet resultSet = statement.executeQuery();
+            int count = 0;
+
+            if (resultSet.next()) {
+                count = resultSet.getInt(1);
+            }
+
+            resultSet.close();
+            statement.close();
+            connection.close();
+
+            System.out.println("📊 Booking count for user " + userId + ": " + count);
+            return count;
+
+        } catch (Exception e) {
+            System.err.println("❌ Error getting booking count: " + e.getMessage());
+            e.printStackTrace();
+            return 0;
         }
     }
 
@@ -418,56 +618,5 @@ public class UserServiceImpl implements UserService {
         // Enhanced email validation
         String emailPattern = "^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$";
         return email.matches(emailPattern);
-    }
-    @Override
-    public boolean demoteUser(int userId) {
-        try {
-            // Update user type to NORMAL in database
-            String sql = "UPDATE users SET user_type = 'NORMAL' WHERE user_id = ?";
-
-            Connection connection = DbUtil.getConnection();
-            PreparedStatement statement = connection.prepareStatement(sql);
-            statement.setInt(1, userId);
-
-            int rowsAffected = statement.executeUpdate();
-
-            statement.close();
-            connection.close();
-
-            return rowsAffected > 0;
-
-        } catch (Exception e) {
-            e.printStackTrace();
-            return false;
-        }
-    }
-
-    // ✅ OPTIONAL: For user booking count display
-    @Override
-    public int getBookingCountByUserId(int userId) {
-        try {
-            String sql = "SELECT COUNT(*) FROM bookings WHERE user_id = ?";
-
-            Connection connection = DbUtil.getConnection();
-            PreparedStatement statement = connection.prepareStatement(sql);
-            statement.setInt(1, userId);
-
-            ResultSet resultSet = statement.executeQuery();
-            int count = 0;
-
-            if (resultSet.next()) {
-                count = resultSet.getInt(1);
-            }
-
-            resultSet.close();
-            statement.close();
-            connection.close();
-
-            return count;
-
-        } catch (Exception e) {
-            e.printStackTrace();
-            return 0;
-        }
     }
 }

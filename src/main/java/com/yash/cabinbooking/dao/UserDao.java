@@ -4,17 +4,18 @@ import com.yash.cabinbooking.model.User;
 import java.util.List;
 
 /**
- * USER DAO INTERFACE - SINGLE COMPANY VERSION
+ * USER DAO INTERFACE - SINGLE COMPANY VERSION WITH SECURE PASSWORD SUPPORT
  *
- * Modified for Yash Technology single company usage
- * - Removed multi-company complexity
- * - Simplified for single organization operations
- * - Enhanced for single company user management
+ * Enhanced Features:
+ * - BCrypt password support
+ * - Secure authentication methods
+ * - Single company operations for Yash Technology
  */
 public interface UserDao {
 
-    // Authentication operations
+    // ✅ ENHANCED: Authentication operations with BCrypt support
     User authenticateUser(String email, String password);
+    User getUserByEmailForAuth(String email); // ✅ NEW: For BCrypt authentication
     boolean emailExists(String email);
 
     // CRUD operations
@@ -29,7 +30,7 @@ public interface UserDao {
     boolean updateUser(User user);
     boolean deleteUser(int userId);
 
-    // Business specific operations
+    // ✅ ENHANCED: Password operations
     boolean updateUserPassword(int userId, String newPassword);
     boolean activateUser(int userId);
     boolean deactivateUser(int userId);
@@ -44,7 +45,7 @@ public interface UserDao {
     int getTotalUserCount();
     int getActiveUserCount();
 
-    // ✅ NEW: Single company utility methods
+    // ✅ Single company utility methods
     List<User> getAllUsersForAdmin();
     boolean updateUserType(int userId, User.UserType newType);
     boolean isUserActive(int userId);

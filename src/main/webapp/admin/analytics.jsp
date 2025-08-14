@@ -198,13 +198,22 @@
                     <div class="activity-header">
                         <h3>📋 Today's Activity</h3>
                         <div class="activity-date">
-                            <fmt:formatDate value="${now != null ? now : pageContext.request.getAttribute('javax.servlet.jsp.jstl.fmt.request.charset')}" pattern="EEEE, MMM dd"/>
+                            <!-- ✅ FIXED: Proper date formatting -->
+                            <c:choose>
+                                <c:when test="${not empty currentDate}">
+                                    <fmt:formatDate value="${currentDate}" pattern="EEEE, MMM dd"/>
+                                </c:when>
+                                <c:otherwise>
+                                    <fmt:formatDate value="${now}" pattern="EEEE, MMM dd"/>
+                                </c:otherwise>
+                            </c:choose>
                         </div>
                     </div>
                     <div class="activity-content">
                         <div class="activity-stats">
                             <div class="activity-stat">
-                                <div class="stat-number">${todayBookings != null ? todayBookings : 0}</div>
+                                <!-- ✅ FIXED: Use correct attribute name -->
+                                <div class="stat-number">${todaysBookings != null ? todaysBookings : 0}</div>
                                 <div class="stat-label">New Bookings</div>
                             </div>
                             <div class="activity-stat">
@@ -212,8 +221,9 @@
                                 <div class="stat-label">Pending</div>
                             </div>
                             <div class="activity-stat">
+                                <!-- ✅ NEW: Today's approvals -->
                                 <div class="stat-number">${todayApprovals != null ? todayApprovals : 0}</div>
-                                <div class="stat-label">Approved</div>
+                                <div class="stat-label">Approved Today</div>
                             </div>
                         </div>
 
@@ -226,10 +236,17 @@
                                 <span class="summary-icon">🏠</span>
                                 <span class="summary-text">${totalCabins != null ? totalCabins : 0} Active Cabins</span>
                             </div>
+                            <!-- ✅ NEW: Add today's date info -->
+                            <div class="summary-item">
+                                <span class="summary-icon">📅</span>
+                                <span class="summary-text">
+                                    <fmt:formatDate value="${now}" pattern="MMM dd, yyyy"/>
+                                </span>
+                            </div>
                         </div>
                     </div>
                 </div>
-            </div>
+
         </section>
 
         <!-- AI Insights Section -->

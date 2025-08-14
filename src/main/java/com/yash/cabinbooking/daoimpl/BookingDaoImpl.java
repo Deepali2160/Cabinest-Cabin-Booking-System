@@ -8,23 +8,19 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * BOOKING DAO IMPLEMENTATION - SINGLE COMPANY VERSION
- *
- * EVALUATION EXPLANATION:
- * - Modified for Yash Technology single company usage
- * - Enhanced flexible time slot system with duration-based booking
- * - Smart overlap detection using time mathematics
- * - Support for 15-minute interval precision
- * - Simplified for single organization operations
- * - AdminController support with required methods
- *
- * INTERVIEW TALKING POINTS:
- * - "Implemented single-tenant booking system with smart conflict detection"
- * - "Enhanced time slot availability with overlap detection algorithms"
- * - "Professional error handling with detailed logging"
- * - "Support for custom booking durations from 15 minutes to 8+ hours"
+ * BOOKING DAO IMPLEMENTATION - SINGLE COMPANY VERSION - FIXED
  */
 public class BookingDaoImpl implements BookingDao {
+
+    // ✅ FIXED: Updated base SQL with rejection fields
+    private static final String BASE_SELECT_SQL =
+            "SELECT b.booking_id, b.user_id, b.cabin_id, b.booking_date, b.time_slot, b.purpose, " +
+                    "b.booking_type, b.status, b.priority_level, b.created_at, b.approved_by, b.approved_at, " +
+                    "b.rejected_by, b.rejected_at, " + // ✅ ADDED REJECTION FIELDS
+                    "u.name as user_name, c.name as cabin_name " +
+                    "FROM bookings b " +
+                    "LEFT JOIN users u ON b.user_id = u.user_id " +
+                    "LEFT JOIN cabins c ON b.cabin_id = c.cabin_id ";
 
     @Override
     public boolean createBooking(Booking booking) {
@@ -40,13 +36,11 @@ public class BookingDaoImpl implements BookingDao {
                 return false;
             }
 
-            // ✅ ENHANCED: Validate time slot format before checking availability
             if (!isValidTimeSlotFormat(booking.getTimeSlot())) {
                 System.err.println("❌ Invalid time slot format: " + booking.getTimeSlot());
                 return false;
             }
 
-            // Check if slot is available with enhanced overlap detection
             if (!isSlotAvailable(booking.getCabinId(), booking.getBookingDate(), booking.getTimeSlot())) {
                 System.err.println("❌ Time slot not available: " + booking.getTimeSlot() + " on " + booking.getBookingDate());
                 return false;
@@ -75,7 +69,7 @@ public class BookingDaoImpl implements BookingDao {
 
         } catch (SQLException e) {
             System.err.println("❌ SQL Error in createBooking: " + e.getMessage());
-            if (e.getErrorCode() == 1062) { // Duplicate key error
+            if (e.getErrorCode() == 1062) {
                 System.err.println("🔄 Time slot already booked: " + booking.getTimeSlot());
             }
             e.printStackTrace();
@@ -88,13 +82,7 @@ public class BookingDaoImpl implements BookingDao {
 
     @Override
     public Booking getBookingById(int bookingId) {
-        String sql = "SELECT b.booking_id, b.user_id, b.cabin_id, b.booking_date, b.time_slot, b.purpose, " +
-                "b.booking_type, b.status, b.priority_level, b.created_at, b.approved_by, b.approved_at, " +
-                "u.name as user_name, c.name as cabin_name " +
-                "FROM bookings b " +
-                "LEFT JOIN users u ON b.user_id = u.user_id " +
-                "LEFT JOIN cabins c ON b.cabin_id = c.cabin_id " +
-                "WHERE b.booking_id = ?";
+        String sql = BASE_SELECT_SQL + "WHERE b.booking_id = ?";
 
         Connection conn = null;
         PreparedStatement pstmt = null;
@@ -127,15 +115,10 @@ public class BookingDaoImpl implements BookingDao {
         return null;
     }
 
+    // ✅ FIXED: getAllBookings with rejection fields
     @Override
     public List<Booking> getAllBookings() {
-        String sql = "SELECT b.booking_id, b.user_id, b.cabin_id, b.booking_date, b.time_slot, b.purpose, " +
-                "b.booking_type, b.status, b.priority_level, b.created_at, b.approved_by, b.approved_at, " +
-                "u.name as user_name, c.name as cabin_name " +
-                "FROM bookings b " +
-                "LEFT JOIN users u ON b.user_id = u.user_id " +
-                "LEFT JOIN cabins c ON b.cabin_id = c.cabin_id " +
-                "ORDER BY b.created_at DESC";
+        String sql = BASE_SELECT_SQL + "ORDER BY b.created_at DESC";
 
         List<Booking> bookings = new ArrayList<>();
         Connection conn = null;
@@ -144,13 +127,22 @@ public class BookingDaoImpl implements BookingDao {
 
         try {
             conn = DbUtil.getConnection();
-            if (conn == null) return bookings;
+            if (conn == null) {
+                System.err.println("❌ Database connection failed in getAllBookings");
+                return bookings;
+            }
 
             pstmt = conn.prepareStatement(sql);
             rs = pstmt.executeQuery();
 
             while (rs.next()) {
-                bookings.add(mapResultSetToBooking(rs));
+                try {
+                    Booking booking = mapResultSetToBooking(rs);
+                    bookings.add(booking);
+                } catch (SQLException e) {
+                    System.err.println("⚠️ Error mapping booking row: " + e.getMessage());
+                    // Continue with next row
+                }
             }
 
             System.out.println("✅ Retrieved " + bookings.size() + " bookings from database");
@@ -165,17 +157,9 @@ public class BookingDaoImpl implements BookingDao {
         return bookings;
     }
 
-    // ✅ NEW: Get recent bookings for AdminController
     @Override
     public List<Booking> getRecentBookings(int limit) {
-        String sql = "SELECT b.booking_id, b.user_id, b.cabin_id, b.booking_date, b.time_slot, b.purpose, " +
-                "b.booking_type, b.status, b.priority_level, b.created_at, b.approved_by, b.approved_at, " +
-                "u.name as user_name, c.name as cabin_name " +
-                "FROM bookings b " +
-                "LEFT JOIN users u ON b.user_id = u.user_id " +
-                "LEFT JOIN cabins c ON b.cabin_id = c.cabin_id " +
-                "ORDER BY b.created_at DESC " +
-                "LIMIT ?";
+        String sql = BASE_SELECT_SQL + "ORDER BY b.created_at DESC LIMIT ?";
 
         List<Booking> bookings = new ArrayList<>();
         Connection conn = null;
@@ -208,14 +192,7 @@ public class BookingDaoImpl implements BookingDao {
 
     @Override
     public List<Booking> getBookingsByUser(int userId) {
-        String sql = "SELECT b.booking_id, b.user_id, b.cabin_id, b.booking_date, b.time_slot, b.purpose, " +
-                "b.booking_type, b.status, b.priority_level, b.created_at, b.approved_by, b.approved_at, " +
-                "u.name as user_name, c.name as cabin_name " +
-                "FROM bookings b " +
-                "LEFT JOIN users u ON b.user_id = u.user_id " +
-                "LEFT JOIN cabins c ON b.cabin_id = c.cabin_id " +
-                "WHERE b.user_id = ? " +
-                "ORDER BY b.booking_date DESC, b.time_slot";
+        String sql = BASE_SELECT_SQL + "WHERE b.user_id = ? ORDER BY b.booking_date DESC, b.time_slot";
 
         List<Booking> bookings = new ArrayList<>();
         Connection conn = null;
@@ -248,14 +225,7 @@ public class BookingDaoImpl implements BookingDao {
 
     @Override
     public List<Booking> getBookingsByCabin(int cabinId) {
-        String sql = "SELECT b.booking_id, b.user_id, b.cabin_id, b.booking_date, b.time_slot, b.purpose, " +
-                "b.booking_type, b.status, b.priority_level, b.created_at, b.approved_by, b.approved_at, " +
-                "u.name as user_name, c.name as cabin_name " +
-                "FROM bookings b " +
-                "LEFT JOIN users u ON b.user_id = u.user_id " +
-                "LEFT JOIN cabins c ON b.cabin_id = c.cabin_id " +
-                "WHERE b.cabin_id = ? " +
-                "ORDER BY b.booking_date DESC, b.time_slot";
+        String sql = BASE_SELECT_SQL + "WHERE b.cabin_id = ? ORDER BY b.booking_date DESC, b.time_slot";
 
         List<Booking> bookings = new ArrayList<>();
         Connection conn = null;
@@ -286,9 +256,13 @@ public class BookingDaoImpl implements BookingDao {
         return bookings;
     }
 
+    // ✅ FIXED: Enhanced updateBooking method
     @Override
     public boolean updateBooking(Booking booking) {
-        String sql = "UPDATE bookings SET user_id = ?, cabin_id = ?, booking_date = ?, time_slot = ?, purpose = ?, booking_type = ?, status = ?, priority_level = ? WHERE booking_id = ?";
+        String sql = "UPDATE bookings SET user_id = ?, cabin_id = ?, booking_date = ?, time_slot = ?, " +
+                "purpose = ?, booking_type = ?, status = ?, priority_level = ?, " +
+                "approved_by = ?, approved_at = ?, rejected_by = ?, rejected_at = ? " +
+                "WHERE booking_id = ?";
 
         Connection conn = null;
         PreparedStatement pstmt = null;
@@ -306,7 +280,34 @@ public class BookingDaoImpl implements BookingDao {
             pstmt.setString(6, booking.getBookingType().name());
             pstmt.setString(7, booking.getStatus().name());
             pstmt.setString(8, booking.getPriorityLevel().name());
-            pstmt.setInt(9, booking.getBookingId());
+
+            // ✅ Handle nullable approved fields
+            if (booking.getApprovedBy() > 0) {
+                pstmt.setInt(9, booking.getApprovedBy());
+            } else {
+                pstmt.setNull(9, Types.INTEGER);
+            }
+
+            if (booking.getApprovedAt() != null) {
+                pstmt.setTimestamp(10, booking.getApprovedAt());
+            } else {
+                pstmt.setNull(10, Types.TIMESTAMP);
+            }
+
+            // ✅ Handle nullable rejected fields
+            if (booking.getRejectedBy() > 0) {
+                pstmt.setInt(11, booking.getRejectedBy());
+            } else {
+                pstmt.setNull(11, Types.INTEGER);
+            }
+
+            if (booking.getRejectedAt() != null) {
+                pstmt.setTimestamp(12, booking.getRejectedAt());
+            } else {
+                pstmt.setNull(12, Types.TIMESTAMP);
+            }
+
+            pstmt.setInt(13, booking.getBookingId());
 
             int rowsAffected = pstmt.executeUpdate();
 
@@ -358,12 +359,7 @@ public class BookingDaoImpl implements BookingDao {
 
     @Override
     public List<Booking> getPendingBookings() {
-        String sql = "SELECT b.booking_id, b.user_id, b.cabin_id, b.booking_date, b.time_slot, b.purpose, " +
-                "b.booking_type, b.status, b.priority_level, b.created_at, b.approved_by, b.approved_at, " +
-                "u.name as user_name, c.name as cabin_name " +
-                "FROM bookings b " +
-                "LEFT JOIN users u ON b.user_id = u.user_id " +
-                "LEFT JOIN cabins c ON b.cabin_id = c.cabin_id " +
+        String sql = BASE_SELECT_SQL +
                 "WHERE b.status = 'PENDING' " +
                 "ORDER BY b.priority_level DESC, b.created_at ASC";
 
@@ -397,12 +393,7 @@ public class BookingDaoImpl implements BookingDao {
 
     @Override
     public List<Booking> getApprovedBookings() {
-        String sql = "SELECT b.booking_id, b.user_id, b.cabin_id, b.booking_date, b.time_slot, b.purpose, " +
-                "b.booking_type, b.status, b.priority_level, b.created_at, b.approved_by, b.approved_at, " +
-                "u.name as user_name, c.name as cabin_name " +
-                "FROM bookings b " +
-                "LEFT JOIN users u ON b.user_id = u.user_id " +
-                "LEFT JOIN cabins c ON b.cabin_id = c.cabin_id " +
+        String sql = BASE_SELECT_SQL +
                 "WHERE b.status = 'APPROVED' " +
                 "ORDER BY b.booking_date DESC, b.time_slot";
 
@@ -436,12 +427,7 @@ public class BookingDaoImpl implements BookingDao {
 
     @Override
     public List<Booking> getBookingsByDate(Date date) {
-        String sql = "SELECT b.booking_id, b.user_id, b.cabin_id, b.booking_date, b.time_slot, b.purpose, " +
-                "b.booking_type, b.status, b.priority_level, b.created_at, b.approved_by, b.approved_at, " +
-                "u.name as user_name, c.name as cabin_name " +
-                "FROM bookings b " +
-                "LEFT JOIN users u ON b.user_id = u.user_id " +
-                "LEFT JOIN cabins c ON b.cabin_id = c.cabin_id " +
+        String sql = BASE_SELECT_SQL +
                 "WHERE b.booking_date = ? " +
                 "ORDER BY b.time_slot, c.name";
 
@@ -476,12 +462,7 @@ public class BookingDaoImpl implements BookingDao {
 
     @Override
     public List<Booking> getBookingsByDateRange(Date startDate, Date endDate) {
-        String sql = "SELECT b.booking_id, b.user_id, b.cabin_id, b.booking_date, b.time_slot, b.purpose, " +
-                "b.booking_type, b.status, b.priority_level, b.created_at, b.approved_by, b.approved_at, " +
-                "u.name as user_name, c.name as cabin_name " +
-                "FROM bookings b " +
-                "LEFT JOIN users u ON b.user_id = u.user_id " +
-                "LEFT JOIN cabins c ON b.cabin_id = c.cabin_id " +
+        String sql = BASE_SELECT_SQL +
                 "WHERE b.booking_date BETWEEN ? AND ? " +
                 "ORDER BY b.booking_date, b.time_slot";
 
@@ -550,9 +531,10 @@ public class BookingDaoImpl implements BookingDao {
         return false;
     }
 
+    // ✅ MAIN FIX: Corrected rejectBooking method
     @Override
-    public boolean rejectBooking(int bookingId, int approvedBy) {
-        String sql = "UPDATE bookings SET status = 'REJECTED', approved_by = ?, approved_at = CURRENT_TIMESTAMP WHERE booking_id = ? AND status = 'PENDING'";
+    public boolean rejectBooking(int bookingId, int rejectedBy) { // ✅ FIXED: Parameter name
+        String sql = "UPDATE bookings SET status = 'REJECTED', rejected_by = ?, rejected_at = CURRENT_TIMESTAMP WHERE booking_id = ? AND status = 'PENDING'";
 
         Connection conn = null;
         PreparedStatement pstmt = null;
@@ -562,13 +544,13 @@ public class BookingDaoImpl implements BookingDao {
             if (conn == null) return false;
 
             pstmt = conn.prepareStatement(sql);
-            pstmt.setInt(1, approvedBy);
+            pstmt.setInt(1, rejectedBy);  // ✅ FIXED: Use rejected_by instead of approved_by
             pstmt.setInt(2, bookingId);
 
             int rowsAffected = pstmt.executeUpdate();
 
             if (rowsAffected > 0) {
-                System.out.println("❌ Booking rejected: " + bookingId + " by admin: " + approvedBy);
+                System.out.println("❌ Booking rejected successfully: " + bookingId + " by admin: " + rejectedBy);
                 return true;
             } else {
                 System.out.println("❌ Booking rejection failed - may already be processed: " + bookingId);
@@ -585,22 +567,18 @@ public class BookingDaoImpl implements BookingDao {
         return false;
     }
 
-    // ✅ ENHANCED: Flexible time slot availability with smart overlap detection
     @Override
     public boolean isSlotAvailable(int cabinId, Date date, String timeSlot) {
-        // ✅ FIX: Handle empty or null time slots (fixes parsing errors)
         if (timeSlot == null || timeSlot.trim().isEmpty()) {
             System.err.println("❌ Empty time slot provided for availability check");
             return false;
         }
 
-        // ✅ FIX: Validate time slot format
         if (!isValidTimeSlotFormat(timeSlot)) {
             System.err.println("❌ Invalid time slot format: " + timeSlot);
             return false;
         }
 
-        // ✅ ENHANCED: Smart overlap detection using time mathematics
         String sql = "SELECT COUNT(*) FROM bookings WHERE cabin_id = ? AND booking_date = ? AND status IN ('PENDING', 'APPROVED') AND " +
                 "((SUBSTRING(time_slot, 1, 5) < SUBSTRING(?, 7, 5)) AND (SUBSTRING(time_slot, 7, 5) > SUBSTRING(?, 1, 5)))";
 
@@ -641,12 +619,7 @@ public class BookingDaoImpl implements BookingDao {
 
     @Override
     public List<Booking> getConflictingBookings(int cabinId, Date date, String timeSlot) {
-        String sql = "SELECT b.booking_id, b.user_id, b.cabin_id, b.booking_date, b.time_slot, b.purpose, " +
-                "b.booking_type, b.status, b.priority_level, b.created_at, b.approved_by, b.approved_at, " +
-                "u.name as user_name, c.name as cabin_name " +
-                "FROM bookings b " +
-                "LEFT JOIN users u ON b.user_id = u.user_id " +
-                "LEFT JOIN cabins c ON b.cabin_id = c.cabin_id " +
+        String sql = BASE_SELECT_SQL +
                 "WHERE b.cabin_id = ? AND b.booking_date = ? AND b.status IN ('PENDING', 'APPROVED') AND " +
                 "((SUBSTRING(b.time_slot, 1, 5) < SUBSTRING(?, 7, 5)) AND (SUBSTRING(b.time_slot, 7, 5) > SUBSTRING(?, 1, 5)))";
 
@@ -682,15 +655,16 @@ public class BookingDaoImpl implements BookingDao {
         return conflicts;
     }
 
-    // ✅ NEW: Generate flexible time slots for any duration
+    // ✅ Continue with all other methods from your original implementation...
+    // (getAvailableTimeSlots, getAlternativeTimeSlots, etc. - keeping them as they are)
+
     @Override
     public List<String> getAvailableTimeSlots(int cabinId, Date date, int durationMinutes) {
         List<String> availableSlots = new ArrayList<>();
 
-        // Business hours configuration
-        int startHour = 9;   // 9 AM
-        int endHour = 18;    // 6 PM
-        int interval = 15;   // 15-minute intervals
+        int startHour = 9;
+        int endHour = 18;
+        int interval = 15;
 
         Connection conn = null;
         PreparedStatement pstmt = null;
@@ -700,7 +674,6 @@ public class BookingDaoImpl implements BookingDao {
             conn = DbUtil.getConnection();
             if (conn == null) return availableSlots;
 
-            // Get all existing bookings for the date and cabin
             String sql = "SELECT time_slot FROM bookings WHERE cabin_id = ? AND booking_date = ? AND status IN ('PENDING', 'APPROVED')";
             pstmt = conn.prepareStatement(sql);
             pstmt.setInt(1, cabinId);
@@ -712,22 +685,18 @@ public class BookingDaoImpl implements BookingDao {
                 bookedSlots.add(rs.getString("time_slot"));
             }
 
-            // Generate all possible time slots
             for (int hour = startHour; hour < endHour; hour++) {
                 for (int minute = 0; minute < 60; minute += interval) {
                     String startTime = String.format("%02d:%02d", hour, minute);
 
-                    // Calculate end time based on duration
                     int totalMinutes = hour * 60 + minute + durationMinutes;
                     int endHourCalc = totalMinutes / 60;
                     int endMinute = totalMinutes % 60;
 
-                    // Check if booking fits within business hours
                     if (endHourCalc <= endHour && (endHourCalc < endHour || endMinute == 0)) {
                         String endTime = String.format("%02d:%02d", endHourCalc, endMinute);
                         String timeSlot = startTime + "-" + endTime;
 
-                        // Check if this slot conflicts with existing bookings
                         if (!hasTimeConflict(timeSlot, bookedSlots)) {
                             availableSlots.add(timeSlot);
                         }
@@ -747,7 +716,6 @@ public class BookingDaoImpl implements BookingDao {
         return availableSlots;
     }
 
-    // ✅ NEW: Get alternative time slots when requested slot is unavailable
     @Override
     public List<String> getAlternativeTimeSlots(int cabinId, Date date, String requestedSlot, int maxAlternatives) {
         List<String> alternatives = new ArrayList<>();
@@ -757,16 +725,13 @@ public class BookingDaoImpl implements BookingDao {
         }
 
         try {
-            // Extract duration from requested slot
             int duration = calculateSlotDuration(requestedSlot);
             if (duration <= 0) {
-                duration = 60; // Default to 1 hour
+                duration = 60;
             }
 
-            // Get all available slots for the same duration
             List<String> availableSlots = getAvailableTimeSlots(cabinId, date, duration);
 
-            // Return up to maxAlternatives
             for (int i = 0; i < Math.min(maxAlternatives, availableSlots.size()); i++) {
                 alternatives.add(availableSlots.get(i));
             }
@@ -781,22 +746,20 @@ public class BookingDaoImpl implements BookingDao {
         return alternatives;
     }
 
-    // ✅ NEW: Get predefined duration options for frontend
     @Override
     public List<Integer> getAvailableDurations() {
         List<Integer> durations = new ArrayList<>();
-        durations.add(15);   // 15 minutes
-        durations.add(30);   // 30 minutes
-        durations.add(45);   // 45 minutes
-        durations.add(60);   // 1 hour
-        durations.add(90);   // 1.5 hours
-        durations.add(120);  // 2 hours
-        durations.add(180);  // 3 hours
-        durations.add(240);  // 4 hours
+        durations.add(15);
+        durations.add(30);
+        durations.add(45);
+        durations.add(60);
+        durations.add(90);
+        durations.add(120);
+        durations.add(180);
+        durations.add(240);
         return durations;
     }
 
-    // ✅ NEW: Generate time slots for a specific duration (for frontend)
     @Override
     public List<String> generateTimeSlotsForDuration(int durationMinutes) {
         List<String> timeSlots = new ArrayList<>();
@@ -809,12 +772,10 @@ public class BookingDaoImpl implements BookingDao {
             for (int minute = 0; minute < 60; minute += interval) {
                 String startTime = String.format("%02d:%02d", hour, minute);
 
-                // Calculate end time
                 int totalMinutes = hour * 60 + minute + durationMinutes;
                 int endHourCalc = totalMinutes / 60;
                 int endMinute = totalMinutes % 60;
 
-                // Check if it fits within business hours
                 if (endHourCalc <= endHour && (endHourCalc < endHour || endMinute == 0)) {
                     String endTime = String.format("%02d:%02d", endHourCalc, endMinute);
                     timeSlots.add(startTime + "-" + endTime);
@@ -827,15 +788,9 @@ public class BookingDaoImpl implements BookingDao {
 
     @Override
     public List<Booking> getUserBookingHistory(int userId) {
-        String sql = "SELECT b.booking_id, b.user_id, b.cabin_id, b.booking_date, b.time_slot, b.purpose, " +
-                "b.booking_type, b.status, b.priority_level, b.created_at, b.approved_by, b.approved_at, " +
-                "u.name as user_name, c.name as cabin_name " +
-                "FROM bookings b " +
-                "LEFT JOIN users u ON b.user_id = u.user_id " +
-                "LEFT JOIN cabins c ON b.cabin_id = c.cabin_id " +
+        String sql = BASE_SELECT_SQL +
                 "WHERE b.user_id = ? AND b.status = 'APPROVED' " +
-                "ORDER BY b.booking_date DESC " +
-                "LIMIT 20";
+                "ORDER BY b.booking_date DESC LIMIT 20";
 
         List<Booking> history = new ArrayList<>();
         Connection conn = null;
@@ -908,15 +863,9 @@ public class BookingDaoImpl implements BookingDao {
 
     @Override
     public List<Booking> getBookingsByPurpose(String purpose) {
-        String sql = "SELECT b.booking_id, b.user_id, b.cabin_id, b.booking_date, b.time_slot, b.purpose, " +
-                "b.booking_type, b.status, b.priority_level, b.created_at, b.approved_by, b.approved_at, " +
-                "u.name as user_name, c.name as cabin_name " +
-                "FROM bookings b " +
-                "LEFT JOIN users u ON b.user_id = u.user_id " +
-                "LEFT JOIN cabins c ON b.cabin_id = c.cabin_id " +
+        String sql = BASE_SELECT_SQL +
                 "WHERE b.purpose LIKE ? AND b.status = 'APPROVED' " +
-                "ORDER BY b.created_at DESC " +
-                "LIMIT 10";
+                "ORDER BY b.created_at DESC LIMIT 10";
 
         List<Booking> bookings = new ArrayList<>();
         Connection conn = null;
@@ -947,15 +896,9 @@ public class BookingDaoImpl implements BookingDao {
         return bookings;
     }
 
-    // ✅ NEW: Additional utility methods for AdminController support
     @Override
     public List<Booking> getBookingsByStatus(String status) {
-        String sql = "SELECT b.booking_id, b.user_id, b.cabin_id, b.booking_date, b.time_slot, b.purpose, " +
-                "b.booking_type, b.status, b.priority_level, b.created_at, b.approved_by, b.approved_at, " +
-                "u.name as user_name, c.name as cabin_name " +
-                "FROM bookings b " +
-                "LEFT JOIN users u ON b.user_id = u.user_id " +
-                "LEFT JOIN cabins c ON b.cabin_id = c.cabin_id " +
+        String sql = BASE_SELECT_SQL +
                 "WHERE b.status = ? " +
                 "ORDER BY b.created_at DESC";
 
@@ -990,12 +933,7 @@ public class BookingDaoImpl implements BookingDao {
 
     @Override
     public List<Booking> getVIPBookings() {
-        String sql = "SELECT b.booking_id, b.user_id, b.cabin_id, b.booking_date, b.time_slot, b.purpose, " +
-                "b.booking_type, b.status, b.priority_level, b.created_at, b.approved_by, b.approved_at, " +
-                "u.name as user_name, c.name as cabin_name " +
-                "FROM bookings b " +
-                "LEFT JOIN users u ON b.user_id = u.user_id " +
-                "LEFT JOIN cabins c ON b.cabin_id = c.cabin_id " +
+        String sql = BASE_SELECT_SQL +
                 "WHERE b.priority_level = 'VIP' " +
                 "ORDER BY b.created_at DESC";
 
@@ -1029,12 +967,7 @@ public class BookingDaoImpl implements BookingDao {
 
     @Override
     public List<Booking> getUrgentBookings() {
-        String sql = "SELECT b.booking_id, b.user_id, b.cabin_id, b.booking_date, b.time_slot, b.purpose, " +
-                "b.booking_type, b.status, b.priority_level, b.created_at, b.approved_by, b.approved_at, " +
-                "u.name as user_name, c.name as cabin_name " +
-                "FROM bookings b " +
-                "LEFT JOIN users u ON b.user_id = u.user_id " +
-                "LEFT JOIN cabins c ON b.cabin_id = c.cabin_id " +
+        String sql = BASE_SELECT_SQL +
                 "WHERE (b.priority_level IN ('VIP', 'HIGH') AND b.status = 'PENDING') " +
                 "OR (b.booking_type = 'EMERGENCY') " +
                 "ORDER BY b.priority_level DESC, b.created_at ASC";
@@ -1231,7 +1164,6 @@ public class BookingDaoImpl implements BookingDao {
             return false;
         }
 
-        // Expected format: "HH:MM-HH:MM" (e.g., "09:00-10:00")
         String pattern = "^([0-1]?[0-9]|2[0-3]):[0-5][0-9]-([0-1]?[0-9]|2[0-3]):[0-5][0-9]$";
 
         if (!timeSlot.matches(pattern)) {
@@ -1243,12 +1175,10 @@ public class BookingDaoImpl implements BookingDao {
             int startMinutes = timeToMinutes(times[0]);
             int endMinutes = timeToMinutes(times[1]);
 
-            // End time must be after start time
             if (endMinutes <= startMinutes) {
                 return false;
             }
 
-            // Maximum booking duration: 8 hours (480 minutes)
             if ((endMinutes - startMinutes) > 480) {
                 return false;
             }
@@ -1260,7 +1190,7 @@ public class BookingDaoImpl implements BookingDao {
         }
     }
 
-    // ✅ ENHANCED: Enhanced mapResultSetToBooking with better error handling
+    // ✅ MAIN FIX: Enhanced mapResultSetToBooking with rejection fields
     private Booking mapResultSetToBooking(ResultSet rs) throws SQLException {
         Booking booking = new Booking();
         booking.setBookingId(rs.getInt("booking_id"));
@@ -1293,7 +1223,7 @@ public class BookingDaoImpl implements BookingDao {
 
         booking.setCreatedAt(rs.getTimestamp("created_at"));
 
-        // Handle nullable fields safely
+        // Handle nullable approved fields safely
         int approvedBy = rs.getInt("approved_by");
         if (!rs.wasNull()) {
             booking.setApprovedBy(approvedBy);
@@ -1302,6 +1232,22 @@ public class BookingDaoImpl implements BookingDao {
         Timestamp approvedAt = rs.getTimestamp("approved_at");
         if (approvedAt != null) {
             booking.setApprovedAt(approvedAt);
+        }
+
+        // ✅ MAIN FIX: Handle nullable rejected fields
+        try {
+            int rejectedBy = rs.getInt("rejected_by");
+            if (!rs.wasNull()) {
+                booking.setRejectedBy(rejectedBy);
+            }
+
+            Timestamp rejectedAt = rs.getTimestamp("rejected_at");
+            if (rejectedAt != null) {
+                booking.setRejectedAt(rejectedAt);
+            }
+        } catch (SQLException e) {
+            // Columns might not exist in some queries - handle gracefully
+            System.out.println("⚠️ Rejected fields not available in this query (this is normal for some operations)");
         }
 
         // Set display fields if available

@@ -130,6 +130,10 @@ public class Booking {
     private int approvedBy;         // approved_by - nullable int
     private Timestamp approvedAt;   // approved_at - nullable timestamp
 
+    // ✅ ADD: NEW REJECTION FIELDS (matching database)
+    private int rejectedBy;         // rejected_by - nullable int
+    private Timestamp rejectedAt;   // rejected_at - nullable timestamp
+
     // ✅ CALCULATED FIELDS (not in database - for display/logic only)
     private int durationMinutes;    // Calculated from timeSlot
     private String startTime;       // Extracted from timeSlot (e.g., "09:00")
@@ -139,12 +143,13 @@ public class Booking {
     private String userName;        // From users table join
     private String cabinName;       // From cabins table join
     private String approverName;    // From users table join (admin name)
+    private String rejecterName;    // ✅ ADD: From users table join (admin who rejected)
 
     // ✅ SINGLE COMPANY CONSTANTS
     private static final String COMPANY_NAME = "Yash Technology";
 
     // ================================
-    // CONSTRUCTORS
+    // CONSTRUCTORS (UPDATED)
     // ================================
 
     // Default Constructor
@@ -183,10 +188,11 @@ public class Booking {
         System.out.println("📅 Enhanced booking created - Type: " + bookingType + ", Priority: " + priorityLevel);
     }
 
-    // Full constructor (from database)
+    // ✅ UPDATED: Full constructor (from database) - WITH REJECTION FIELDS
     public Booking(int bookingId, int userId, int cabinId, Date bookingDate, String timeSlot,
                    String purpose, BookingType bookingType, Status status, PriorityLevel priorityLevel,
-                   Timestamp createdAt, int approvedBy, Timestamp approvedAt) {
+                   Timestamp createdAt, int approvedBy, Timestamp approvedAt,
+                   int rejectedBy, Timestamp rejectedAt) { // ✅ ADDED PARAMETERS
         this.bookingId = bookingId;
         this.userId = userId;
         this.cabinId = cabinId;
@@ -199,12 +205,14 @@ public class Booking {
         this.createdAt = createdAt;
         this.approvedBy = approvedBy;
         this.approvedAt = approvedAt;
+        this.rejectedBy = rejectedBy;       // ✅ ADDED
+        this.rejectedAt = rejectedAt;       // ✅ ADDED
         calculateTimeFields();
         System.out.println("💾 Booking loaded from database: " + bookingId + " (" + durationMinutes + " min)");
     }
 
     // ================================
-    // TIME CALCULATION METHODS
+    // TIME CALCULATION METHODS (UNCHANGED)
     // ================================
 
     // Auto-calculate duration and time fields from timeSlot
@@ -230,7 +238,7 @@ public class Booking {
     }
 
     // ================================
-    // VALIDATION METHODS
+    // VALIDATION METHODS (UNCHANGED)
     // ================================
 
     // Validate time slot format and duration
@@ -292,7 +300,7 @@ public class Booking {
     }
 
     // ================================
-    // DISPLAY METHODS
+    // DISPLAY METHODS (UNCHANGED)
     // ================================
 
     // Get human-readable duration display
@@ -334,7 +342,7 @@ public class Booking {
     }
 
     // ================================
-    // BUSINESS LOGIC METHODS
+    // BUSINESS LOGIC METHODS (UNCHANGED)
     // ================================
 
     // Status check methods
@@ -368,7 +376,7 @@ public class Booking {
     }
 
     // ================================
-    // GETTERS AND SETTERS
+    // GETTERS AND SETTERS (UPDATED WITH NEW FIELDS)
     // ================================
 
     // Primary key
@@ -415,6 +423,13 @@ public class Booking {
     public Timestamp getApprovedAt() { return approvedAt; }
     public void setApprovedAt(Timestamp approvedAt) { this.approvedAt = approvedAt; }
 
+    // ✅ NEW: REJECTION FIELDS GETTERS & SETTERS
+    public int getRejectedBy() { return rejectedBy; }
+    public void setRejectedBy(int rejectedBy) { this.rejectedBy = rejectedBy; }
+
+    public Timestamp getRejectedAt() { return rejectedAt; }
+    public void setRejectedAt(Timestamp rejectedAt) { this.rejectedAt = rejectedAt; }
+
     // Calculated fields
     public int getDurationMinutes() { return durationMinutes; }
     public void setDurationMinutes(int durationMinutes) { this.durationMinutes = durationMinutes; }
@@ -435,11 +450,15 @@ public class Booking {
     public String getApproverName() { return approverName; }
     public void setApproverName(String approverName) { this.approverName = approverName; }
 
+    // ✅ NEW: REJECTER NAME GETTER & SETTER
+    public String getRejecterName() { return rejecterName; }
+    public void setRejecterName(String rejecterName) { this.rejecterName = rejecterName; }
+
     // Company info (single company)
     public String getCompanyName() { return COMPANY_NAME; }
 
     // ================================
-    // UTILITY METHODS
+    // UTILITY METHODS (UPDATED)
     // ================================
 
     @Override
@@ -456,6 +475,8 @@ public class Booking {
                 ", status=" + status +
                 ", priorityLevel=" + priorityLevel +
                 ", createdAt=" + createdAt +
+                ", approvedAt=" + approvedAt +
+                ", rejectedAt=" + rejectedAt +  // ✅ ADDED
                 '}';
     }
 

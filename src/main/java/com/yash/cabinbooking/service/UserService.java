@@ -4,17 +4,19 @@ import com.yash.cabinbooking.model.User;
 import java.util.List;
 
 /**
- * USER SERVICE INTERFACE - SINGLE COMPANY VERSION
+ * USER SERVICE INTERFACE - SINGLE COMPANY VERSION WITH SECURE AUTHENTICATION
  *
- * Modified for Yash Technology single company usage
- * - Removed multi-company complexity
- * - Enhanced for single organization operations
- * - Added AdminController support methods
+ * Enhanced Features:
+ * - BCrypt password hashing support
+ * - Secure authentication methods
+ * - Single company operations for Yash Technology
+ * - AdminController support methods
  */
 public interface UserService {
 
-    // Authentication services
+    // ✅ ENHANCED: Authentication services with BCrypt support
     User authenticateUser(String email, String password);
+    User authenticateUserWithHashedPassword(String email, String password); // ✅ NEW METHOD
     boolean registerUser(User user);
     boolean isEmailAvailable(String email);
 
@@ -28,6 +30,7 @@ public interface UserService {
 
     boolean updateUserProfile(User user);
     boolean changePassword(int userId, String oldPassword, String newPassword);
+    boolean changePasswordWithHash(int userId, String oldPassword, String newPassword); // ✅ NEW METHOD
 
     // User privileges and status
     boolean promoteToVIP(int userId);
@@ -43,17 +46,15 @@ public interface UserService {
     boolean hasAdminPrivileges(User user);
     boolean canAccessVIPCabins(User user);
 
-    // ✅ NEW: AdminController support methods
+    // ✅ AdminController support methods
     int getTotalUserCount();
     int getActiveUserCount();
     List<User> getAllUsersForAdmin();
     boolean isUserActive(int userId);
 
-    // ✅ NEW: Enhanced user type management
+    // ✅ Enhanced user type management
     List<User> getUsersByType(User.UserType userType);
     boolean validateUserPermissions(User user, String permission);
-    // ✅ ADD THESE NEW METHODS
-
     boolean demoteUser(int userId);
-    int getBookingCountByUserId(int userId); // Optional - for user booking counts
+    int getBookingCountByUserId(int userId);
 }

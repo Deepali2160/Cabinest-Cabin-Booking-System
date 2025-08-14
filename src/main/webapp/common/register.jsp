@@ -52,17 +52,27 @@
                     <input type="hidden" name="companyId" value="1">
                 </div>
 
-                <!-- Password Row -->
+                <!-- ✅ UPDATED: Password Row with Enhanced Requirements -->
                 <div class="form-row">
                     <div class="form-group">
                         <label for="password">Password</label>
-                        <input type="password" id="password" name="password" minlength="6" required>
-                        <small class="form-help">Minimum 6 characters</small>
+                        <input type="password" id="password" name="password" minlength="8" required>
+                        <!-- ✅ ENHANCED: Clear password requirements -->
+                        <small class="form-help" style="color: #666; font-size: 0.85em;">
+                            🔒 <strong>Password must contain:</strong><br>
+                            • At least 8 characters<br>
+                            • One uppercase letter (A-Z)<br>
+                            • One lowercase letter (a-z)<br>
+                            • One digit (0-9)<br>
+                            • One special character (!@#$%^&*)
+                        </small>
                     </div>
 
                     <div class="form-group">
                         <label for="confirmPassword">Confirm Password</label>
                         <input type="password" id="confirmPassword" name="confirmPassword" required>
+                        <!-- ✅ NEW: Password match helper -->
+                        <small class="form-help">Re-enter the same password</small>
                     </div>
                 </div>
 
@@ -77,6 +87,10 @@
                 <p>Already have an account?
                     <a href="${pageContext.request.contextPath}/login">Login here</a>
                 </p>
+                <!-- ✅ NEW: Security note -->
+                <small style="color: #888; margin-top: 10px; display: block;">
+                    🛡️ Your password is encrypted with enterprise-grade security
+                </small>
             </div>
         </div>
     </div>

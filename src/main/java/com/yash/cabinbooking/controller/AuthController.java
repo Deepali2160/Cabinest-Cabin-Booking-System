@@ -6,6 +6,7 @@ import com.yash.cabinbooking.serviceimpl.UserServiceImpl;
 import com.yash.cabinbooking.serviceimpl.CompanyServiceImpl;
 import com.yash.cabinbooking.model.User;
 import com.yash.cabinbooking.model.Company;
+import com.yash.cabinbooking.util.PasswordUtil; // ✅ ADDED: Import PasswordUtil
 
 import javax.servlet.ServletException;
 import javax.servlet.annotation.WebServlet;
@@ -16,9 +17,13 @@ import javax.servlet.http.HttpSession;
 import java.io.IOException;
 
 /**
- * AUTHENTICATION CONTROLLER - SINGLE COMPANY VERSION
+ * AUTHENTICATION CONTROLLER - SINGLE COMPANY VERSION WITH SECURE PASSWORD HASHING
  *
- * Modified for Yash Technology single company usage
+ * Enhanced Features:
+ * - BCrypt password hashing for maximum security
+ * - Strong password validation
+ * - Secure user authentication
+ * - Protection against rainbow table attacks
  * - Enhanced session management for all user types
  * - Improved role-based redirect logic
  * - Single company registration process
@@ -38,7 +43,7 @@ public class AuthController extends HttpServlet {
     public void init() throws ServletException {
         this.userService = new UserServiceImpl();
         this.companyService = new CompanyServiceImpl();
-        System.out.println("🔧 AuthController initialized for " + COMPANY_NAME + " (Single Company)");
+        System.out.println("🔧 AuthController initialized for " + COMPANY_NAME + " (Single Company) with BCrypt Security");
     }
 
     @Override
@@ -119,9 +124,10 @@ public class AuthController extends HttpServlet {
         request.getRequestDispatcher("/common/register.jsp").forward(request, response);
     }
 
+    // ✅ SECURITY ENHANCED: Login with BCrypt password verification
     private void handleLogin(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
-        System.out.println("🔐 Processing login request for " + COMPANY_NAME);
+        System.out.println("🔐 Processing secure login request for " + COMPANY_NAME);
 
         String email = request.getParameter("email");
         String password = request.getParameter("password");
@@ -138,12 +144,13 @@ public class AuthController extends HttpServlet {
             return;
         }
 
-        // Authenticate user
-        User user = userService.authenticateUser(email.trim(), password);
+        // ✅ SECURITY ENHANCEMENT: Authenticate with hashed password verification
+        User user = userService.authenticateUserWithHashedPassword(email.trim(), password);
 
         if (user != null) {
             // Successful login
-            System.out.println("✅ Login successful for: " + user.getName() + " (" + user.getUserTypeDisplay() + ") at " + COMPANY_NAME);
+            System.out.println("✅ Secure login successful for: " + user.getName() +
+                    " (" + user.getUserTypeDisplay() + ") at " + COMPANY_NAME);
 
             // ✅ ENHANCED: Create comprehensive session with all required attributes
             HttpSession session = request.getSession(true);
@@ -168,7 +175,7 @@ public class AuthController extends HttpServlet {
             // Set session timeout (30 minutes)
             session.setMaxInactiveInterval(30 * 60);
 
-            System.out.println("🎉 Complete session created for user: " + user.getName() +
+            System.out.println("🎉 Complete secure session created for user: " + user.getName() +
                     " (Type: " + user.getUserType() + ") - Company: " + COMPANY_NAME);
 
             // ✅ ENHANCED: Role-based redirect logic
@@ -178,16 +185,17 @@ public class AuthController extends HttpServlet {
 
         } else {
             // Login failed
-            System.err.println("❌ Login failed for email: " + email);
+            System.err.println("❌ Secure login failed for email: " + email);
             request.setAttribute("error", "Invalid email or password");
             request.setAttribute("email", email); // Keep email for user convenience
             showLoginPage(request, response);
         }
     }
 
+    // ✅ SECURITY ENHANCED: Registration with BCrypt password hashing
     private void handleRegistration(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
-        System.out.println("📝 Processing registration request for " + COMPANY_NAME);
+        System.out.println("📝 Processing secure registration request for " + COMPANY_NAME);
 
         String name = request.getParameter("name");
         String email = request.getParameter("email");
@@ -196,7 +204,7 @@ public class AuthController extends HttpServlet {
 
         System.out.println("👤 Registration attempt for: " + name + " (" + email + ") at " + COMPANY_NAME);
 
-        // Input validation
+        // ✅ ENHANCED: Input validation with strong password requirements
         String validationError = validateRegistrationInput(name, email, password, confirmPassword);
         if (validationError != null) {
             System.err.println("❌ Registration validation failed: " + validationError);
@@ -216,8 +224,23 @@ public class AuthController extends HttpServlet {
             return;
         }
 
-        // ✅ SINGLE COMPANY: Create new user with default company
-        User newUser = new User(name.trim(), email.trim().toLowerCase(), password);
+        // ✅ SECURITY ENHANCEMENT: Hash password before creating user
+        String hashedPassword;
+        try {
+            hashedPassword = PasswordUtil.hashPassword(password);
+            System.out.println("🔐 Password hashed successfully for user: " + name + " using BCrypt with salt");
+        } catch (Exception e) {
+            System.err.println("❌ Password hashing failed: " + e.getMessage());
+            e.printStackTrace();
+            request.setAttribute("error", "Registration failed due to security error. Please try again.");
+            request.setAttribute("name", name);
+            request.setAttribute("email", email);
+            showRegistrationPage(request, response);
+            return;
+        }
+
+        // ✅ SINGLE COMPANY: Create new user with securely hashed password
+        User newUser = new User(name.trim(), email.trim().toLowerCase(), hashedPassword); // ✅ HASHED PASSWORD
         newUser.setDefaultCompanyId(DEFAULT_COMPANY_ID);
         newUser.setUserType(User.UserType.NORMAL); // Default to normal user
         newUser.setStatus(User.Status.ACTIVE);
@@ -225,8 +248,8 @@ public class AuthController extends HttpServlet {
         boolean registrationSuccess = userService.registerUser(newUser);
 
         if (registrationSuccess) {
-            System.out.println("✅ Registration successful for: " + newUser.getName() +
-                    " (ID: " + newUser.getUserId() + ") at " + COMPANY_NAME);
+            System.out.println("✅ Secure registration successful for: " + newUser.getName() +
+                    " (ID: " + newUser.getUserId() + ") at " + COMPANY_NAME + " with BCrypt password protection");
 
             // ✅ ENHANCED: Auto-login with complete session setup
             HttpSession session = request.getSession(true);
@@ -252,9 +275,9 @@ public class AuthController extends HttpServlet {
 
             System.out.println("🎉 Auto-login successful for " + COMPANY_NAME + ", redirecting to dashboard");
 
-            // Set success message
+            // Set success message with security information
             session.setAttribute("successMessage",
-                    "Welcome to " + COMPANY_NAME + "! Your account has been created successfully.");
+                    "Welcome to " + COMPANY_NAME + "! Your account has been created successfully with enterprise-grade password security.");
 
             // Redirect to user dashboard (new users are always NORMAL)
             response.sendRedirect(request.getContextPath() + "/dashboard");
@@ -333,6 +356,7 @@ public class AuthController extends HttpServlet {
         }
     }
 
+    // ✅ SECURITY ENHANCED: Strong password validation
     private String validateRegistrationInput(String name, String email, String password, String confirmPassword) {
         if (name == null || name.trim().isEmpty()) {
             return "Name is required";
@@ -350,12 +374,24 @@ public class AuthController extends HttpServlet {
             return "Please enter a valid email address";
         }
 
-        if (password == null || password.length() < 6) {
-            return "Password must be at least 6 characters long";
+        // ✅ ENHANCED: Minimum 8 characters for better security
+        if (password == null || password.length() < 8) {
+            return "Password must be at least 8 characters long";
+        }
+
+        // ✅ ENHANCED: Strong password validation using PasswordUtil
+        if (!PasswordUtil.isStrongPassword(password)) {
+            return "Password must contain at least one uppercase letter, one lowercase letter, one digit, and one special character (!@#$%^&*()_+-=[]{}|;:,.<>?)";
         }
 
         if (confirmPassword == null || !password.equals(confirmPassword)) {
             return "Passwords do not match";
+        }
+
+        // ✅ ADDITIONAL: Password strength feedback
+        String strength = PasswordUtil.getPasswordStrength(password);
+        if ("Very Weak".equals(strength) || "Weak".equals(strength)) {
+            return "Password is too weak. Please choose a stronger password with mix of characters.";
         }
 
         return null; // No validation errors
