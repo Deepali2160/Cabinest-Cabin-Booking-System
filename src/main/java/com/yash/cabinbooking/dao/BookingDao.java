@@ -4,22 +4,6 @@ import com.yash.cabinbooking.model.Booking;
 import java.sql.Date;
 import java.util.List;
 
-/**
- * BOOKING DAO INTERFACE - SINGLE COMPANY VERSION
- *
- * EVALUATION EXPLANATION:
- * - Modified for Yash Technology single company usage
- * - Flexible duration booking system with 15-minute precision
- * - Smart conflict detection and resolution methods
- * - Simplified for single organization operations
- * - Aligned with current Booking model class
- *
- * INTERVIEW TALKING POINTS:
- * - "Designed single-tenant booking interface for scalability"
- * - "Implemented smart time slot management with conflict resolution"
- * - "Added essential methods for single company cabin booking"
- * - "Created clean architecture focused on user-cabin relationships"
- */
 public interface BookingDao {
 
     // ================================

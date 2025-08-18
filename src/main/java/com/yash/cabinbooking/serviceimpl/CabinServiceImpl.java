@@ -9,21 +9,7 @@ import java.util.List;
 import java.util.ArrayList;
 import java.util.stream.Collectors;
 
-/**
- * CABIN SERVICE IMPLEMENTATION - SINGLE COMPANY VERSION
- *
- * EVALUATION EXPLANATION:
- * - Business logic layer for single company (Yash Technology)
- * - User access control and VIP management
- * - AI-powered cabin recommendations
- * - Admin operations without company selection
- *
- * INTERVIEW TALKING POINTS:
- * - "Single-tenant service layer with business rules"
- * - "VIP access control centralized in service layer"
- * - "AI recommendations for better user experience"
- * - "Simplified operations for single company"
- */
+
 public class CabinServiceImpl implements CabinService {
 
     private CabinDao cabinDao;

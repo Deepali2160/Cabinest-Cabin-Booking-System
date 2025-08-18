@@ -2,9 +2,6 @@ package com.yash.cabinbooking.model;
 
 import java.sql.Timestamp;
 
-/**
- * COMPANY MODEL CLASS - SINGLE COMPANY VERSION
- */
 public class Company {
 
     public enum Status {

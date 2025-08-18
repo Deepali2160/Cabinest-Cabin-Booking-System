@@ -20,16 +20,7 @@ import java.util.List;
 import java.util.ArrayList;
 import java.util.regex.Pattern;
 
-/**
- * BOOKING SERVICE IMPLEMENTATION - ENHANCED WITH VIP OVERRIDE & ADMIN FEATURES
- *
- * FEATURES IMPLEMENTED:
- * 1. ⭐ VIP Override: VIP users can force book any cabin, normal users auto-reallocated
- * 2. 👨💼 Admin Cabin Reallocation: Admins can move users to different cabins
- * 3. 🎯 Admin Manual Assignment: Admins can assign specific cabins instead of user choice
- * 4. 🔧 Flexible duration booking system (15 min to 8+ hours)
- * 5. 🚀 Smart conflict detection and resolution
- */
+
 public class BookingServiceImpl implements BookingService {
 
     private BookingDao bookingDAO;

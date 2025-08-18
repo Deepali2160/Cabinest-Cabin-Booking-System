@@ -3,14 +3,7 @@ package com.yash.cabinbooking.dao;
 import com.yash.cabinbooking.model.User;
 import java.util.List;
 
-/**
- * USER DAO INTERFACE - SINGLE COMPANY VERSION WITH SECURE PASSWORD SUPPORT
- *
- * Enhanced Features:
- * - BCrypt password support
- * - Secure authentication methods
- * - Single company operations for Yash Technology
- */
+
 public interface UserDao {
 
     // ✅ ENHANCED: Authentication operations with BCrypt support

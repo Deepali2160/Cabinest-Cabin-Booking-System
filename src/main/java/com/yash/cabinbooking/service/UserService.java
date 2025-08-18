@@ -3,15 +3,7 @@ package com.yash.cabinbooking.service;
 import com.yash.cabinbooking.model.User;
 import java.util.List;
 
-/**
- * USER SERVICE INTERFACE - SINGLE COMPANY VERSION WITH SECURE AUTHENTICATION
- *
- * Enhanced Features:
- * - BCrypt password hashing support
- * - Secure authentication methods
- * - Single company operations for Yash Technology
- * - AdminController support methods
- */
+
 public interface UserService {
 
     // ✅ ENHANCED: Authentication services with BCrypt support

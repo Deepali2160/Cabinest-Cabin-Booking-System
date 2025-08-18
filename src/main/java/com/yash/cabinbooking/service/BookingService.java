@@ -6,10 +6,6 @@ import com.yash.cabinbooking.model.User;
 import java.sql.Date;
 import java.util.List;
 
-/**
- * BOOKING SERVICE INTERFACE - SINGLE COMPANY VERSION
- * Modified for Yash Technology single company usage
- */
 public interface BookingService {
 
     // Core booking operations

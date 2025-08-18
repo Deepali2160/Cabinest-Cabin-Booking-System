@@ -18,14 +18,6 @@ import java.io.IOException;
 import java.util.List;
 import java.util.stream.Collectors;
 
-/**
- * USER CONTROLLER - SINGLE COMPANY VERSION
- *
- * Modified for Yash Technology single company usage
- * - Removed AI service dependencies (causing errors)
- * - Simplified for single organization operations
- * - Enhanced dashboard with booking statistics
- */
 @WebServlet(name = "UserController", urlPatterns = {"/dashboard", "/profile", "/company/*"})
 public class UserController extends HttpServlet {
 

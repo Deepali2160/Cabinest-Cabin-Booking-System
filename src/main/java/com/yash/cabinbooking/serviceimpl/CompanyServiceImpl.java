@@ -8,23 +8,7 @@ import com.yash.cabinbooking.service.CompanyService;
 import com.yash.cabinbooking.model.Company;
 import com.yash.cabinbooking.model.Cabin;
 import java.util.List;
-import java.util.ArrayList;
 
-/**
- * COMPANY SERVICE IMPLEMENTATION - SINGLE COMPANY VERSION
- *
- * EVALUATION EXPLANATION:
- * - Single company (Yash Technology) support
- * - Simplified cabin management without company selection
- * - Business logic for single organization operations
- * - Integration with company_config table
- *
- * INTERVIEW TALKING POINTS:
- * - "Single-tenant architecture implement kiya"
- * - "Company configuration management"
- * - "Business validation for single company operations"
- * - "Clean separation between DAO and business logic"
- */
 public class CompanyServiceImpl implements CompanyService {
 
     private CompanyDao companyDAO;

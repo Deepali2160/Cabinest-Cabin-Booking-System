@@ -5,23 +5,7 @@ import java.sql.Timestamp;
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 
-/**
- * BOOKING MODEL CLASS - SINGLE COMPANY VERSION
- *
- * EVALUATION EXPLANATION:
- * - Enhanced for flexible duration booking (15 min to 8+ hours)
- * - Optimized for Yash Technology single company usage
- * - Smart time slot management with duration calculation
- * - Status workflow for admin approval process
- * - Priority levels for VIP handling
- * - Aligned with database table structure
- *
- * INTERVIEW TALKING POINTS:
- * - "Implemented flexible duration booking model supporting any time range"
- * - "Added smart time slot validation and overlap detection methods"
- * - "Enhanced enum system matching database constraints"
- * - "Built single-company focused model for scalability"
- */
+
 public class Booking {
 
     // ✅ DATABASE ALIGNED: Booking types matching your table

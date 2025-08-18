@@ -8,16 +8,6 @@ import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
 
-/**
- * CABIN DAO IMPLEMENTATION - SINGLE COMPANY VERSION WITH AI SUPPORT
- *
- * EVALUATION EXPLANATION:
- * - Modified for single company (Yash Technology) usage
- * - Added AI Recommendation Service compatibility methods
- * - No company_id parameters needed in most methods
- * - Default company_id = 1 for all cabins
- * - Simplified for single organization cabin booking
- */
 public class CabinDaoImpl implements CabinDao {
 
     // ✅ KEEP ALL YOUR EXISTING METHODS AS THEY ARE

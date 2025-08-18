@@ -7,9 +7,6 @@ import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
 
-/**
- * BOOKING DAO IMPLEMENTATION - SINGLE COMPANY VERSION - FIXED
- */
 public class BookingDaoImpl implements BookingDao {
 
     // ✅ FIXED: Updated base SQL with rejection fields

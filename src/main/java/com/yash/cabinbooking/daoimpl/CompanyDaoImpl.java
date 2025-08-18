@@ -5,15 +5,6 @@ import com.yash.cabinbooking.model.Company;
 import com.yash.cabinbooking.util.DbUtil;
 import java.sql.*;
 
-/**
- * COMPANY DAO IMPLEMENTATION - SINGLE COMPANY VERSION
- *
- * EVALUATION EXPLANATION:
- * - Modified for single company (Yash Technology) usage
- * - Uses company_config table instead of companies table
- * - Simplified for single organization cabin booking
- * - No multi-company CRUD operations needed
- */
 public class CompanyDaoImpl implements CompanyDao {
 
     @Override

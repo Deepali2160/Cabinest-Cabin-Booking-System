@@ -12,23 +12,7 @@ import java.sql.Date;
 import java.util.*;
 import java.util.stream.Collectors;
 
-/**
- * AI RECOMMENDATION SERVICE IMPLEMENTATION
- *
- * EVALUATION EXPLANATION:
- * - Machine learning-inspired recommendation engine
- * - User behavior pattern analysis and prediction
- * - Smart conflict resolution with alternatives
- * - Popularity-based recommendations for new users
- * - Advanced algorithms for personalized suggestions
- *
- * INTERVIEW TALKING POINTS:
- * - "AI recommendation engine banaya with pattern recognition"
- * - "Machine learning concepts apply kiye user behavior analysis ke liye"
- * - "Smart algorithms implement kiye for conflict resolution"
- * - "Popularity-based filtering aur collaborative filtering approach use kiya"
- * - "Real-time suggestions with local processing (no external APIs)"
- */
+
 public class AIRecommendationServiceImpl implements AIRecommendationService {
 
     private BookingDao bookingDAO;

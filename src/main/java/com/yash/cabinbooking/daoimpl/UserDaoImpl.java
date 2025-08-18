@@ -9,16 +9,7 @@ import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
 
-/**
- * USER DAO IMPLEMENTATION - SINGLE COMPANY VERSION WITH SECURE PASSWORD HASHING
- *
- * Enhanced Features:
- * - BCrypt password support
- * - Secure authentication with hash verification
- * - Legacy password migration support
- * - Single company focused operations
- * - Improved logging and resource management
- */
+
 public class UserDaoImpl implements UserDao {
 
     // ✅ LEGACY: Keep for backward compatibility (but recommend using BCrypt method)

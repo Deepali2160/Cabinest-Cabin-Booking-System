@@ -16,19 +16,6 @@ import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpSession;
 import java.io.IOException;
 
-/**
- * AUTHENTICATION CONTROLLER - SINGLE COMPANY VERSION WITH SECURE PASSWORD HASHING
- *
- * Enhanced Features:
- * - BCrypt password hashing for maximum security
- * - Strong password validation
- * - Secure user authentication
- * - Protection against rainbow table attacks
- * - Enhanced session management for all user types
- * - Improved role-based redirect logic
- * - Single company registration process
- * - Fixed admin session attributes for JSP compatibility
- */
 @WebServlet(name = "AuthController", urlPatterns = {"/auth", "/login", "/logout", "/register"})
 public class AuthController extends HttpServlet {
 

@@ -2,15 +2,7 @@ package com.yash.cabinbooking.util;
 
 import java.sql.*;
 
-/**
- * DATABASE UTILITY CLASS - WITH PROPER IST TIMEZONE HANDLING
- *
- * FIXES APPLIED:
- * - Fixed timezone mismatch causing wrong timestamp display
- * - Added IST (Asia/Kolkata) timezone configuration
- * - Enhanced connection string with proper datetime parameters
- * - Added session timezone setting for consistent behavior
- */
+
 public class DbUtil {
 
     // ✅ MAIN FIX: Updated URL with correct IST timezone

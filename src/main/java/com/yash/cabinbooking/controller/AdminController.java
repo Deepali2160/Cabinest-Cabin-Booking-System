@@ -2,7 +2,6 @@ package com.yash.cabinbooking.controller;
 
 import com.yash.cabinbooking.model.User;
 import com.yash.cabinbooking.model.Cabin;
-import com.yash.cabinbooking.model.Company;
 import com.yash.cabinbooking.model.Booking;
 import com.yash.cabinbooking.service.*;
 import com.yash.cabinbooking.serviceimpl.*;

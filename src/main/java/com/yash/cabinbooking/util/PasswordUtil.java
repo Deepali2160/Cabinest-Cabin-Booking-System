@@ -2,15 +2,7 @@ package com.yash.cabinbooking.util;
 
 import org.mindrot.jbcrypt.BCrypt;
 
-/**
- * PASSWORD UTILITY CLASS - SECURE HASHING WITH BCRYPT
- *
- * Features:
- * - BCrypt hashing with automatic salt generation
- * - Secure password verification
- * - Industry-standard security practices
- * - Protection against rainbow table attacks
- */
+
 public class PasswordUtil {
 
     // BCrypt work factor (cost) - Higher = More secure but slower

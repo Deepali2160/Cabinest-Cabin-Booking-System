@@ -22,10 +22,6 @@ import java.util.ArrayList;
 import java.text.SimpleDateFormat;
 import java.util.stream.Collectors;
 
-/**
- * BOOKING CONTROLLER - SINGLE COMPANY VERSION
- * Modified for Yash Technology single company usage
- */
 @WebServlet(name = "BookingController", urlPatterns = {"/booking/*", "/book", "/mybookings"})
 public class BookingController extends HttpServlet {
 

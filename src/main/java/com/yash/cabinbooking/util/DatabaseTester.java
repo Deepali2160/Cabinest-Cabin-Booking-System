@@ -1,9 +1,5 @@
 package com.yash.cabinbooking.util;
 
-/**
- * TEST DATABASE CONNECTION
- * Run this class to verify your database setup
- */
 public class DatabaseTester {
 
     public static void main(String[] args) {

@@ -2,10 +2,6 @@ package com.yash.cabinbooking.model;
 
 import java.sql.Timestamp;
 
-/**
- * USER MODEL CLASS - SINGLE COMPANY VERSION
- * Modified for Yash Technology single company usage
- */
 public class User {
 
     // User Types Enum for type safety

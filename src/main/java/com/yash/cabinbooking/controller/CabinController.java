@@ -18,10 +18,6 @@ import java.io.IOException;
 import java.util.List;
 import java.util.stream.Collectors;
 
-/**
- * CABIN CONTROLLER - ENHANCED WITH PROPER URL MAPPINGS
- * ✅ Fixed all URL mapping issues and duplicate exception handling
- */
 @WebServlet(urlPatterns = {
         "/admin/add-cabin",           // Cabin creation
         "/admin/manage-cabins",       // Cabin management

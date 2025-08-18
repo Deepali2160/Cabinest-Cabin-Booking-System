@@ -2,14 +2,7 @@ package com.yash.cabinbooking.model;
 
 import java.sql.Timestamp;
 
-/**
- * USER PREFERENCE MODEL FOR AI LEARNING
- *
- * EVALUATION EXPLANATION:
- * - AI recommendation engine के लिए user patterns store करता है
- * - Machine learning based suggestions enable करता है
- * - User behavior tracking for personalized experience
- */
+
 public class UserPreference {
 
     private int preferenceId;

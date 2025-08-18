@@ -4,10 +4,6 @@ import com.yash.cabinbooking.model.Cabin;
 import com.yash.cabinbooking.model.User;
 import java.util.List;
 
-/**
- * CABIN DAO INTERFACE - SINGLE COMPANY VERSION WITH AI SUPPORT
- * Modified for Yash Technology single company usage + AI Recommendations
- */
 public interface CabinDao {
 
     // CRUD operations (no company ID needed)

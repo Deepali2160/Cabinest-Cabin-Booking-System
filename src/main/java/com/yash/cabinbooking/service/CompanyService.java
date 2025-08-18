@@ -4,10 +4,7 @@ import com.yash.cabinbooking.model.Company;
 import com.yash.cabinbooking.model.Cabin;
 import java.util.List;
 
-/**
- * COMPANY SERVICE INTERFACE - SINGLE COMPANY VERSION
- * Modified for Yash Technology single company usage
- */
+
 public interface CompanyService {
 
     // Single company configuration

@@ -4,10 +4,6 @@ import com.yash.cabinbooking.model.Cabin;
 import com.yash.cabinbooking.model.User;
 import java.util.List;
 
-/**
- * CABIN SERVICE INTERFACE - SINGLE COMPANY VERSION
- * Modified for Yash Technology single company usage
- */
 public interface CabinService {
 
     // Core CRUD Operations (no company ID needed)

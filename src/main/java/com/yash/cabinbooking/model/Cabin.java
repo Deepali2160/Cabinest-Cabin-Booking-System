@@ -2,16 +2,6 @@ package com.yash.cabinbooking.model;
 
 import java.sql.Timestamp;
 
-/**
- * CABIN MODEL CLASS - SINGLE COMPANY VERSION
- *
- * EVALUATION EXPLANATION:
- * - Represents meeting rooms/cabins for Yash Technology
- * - VIP-only flag for exclusive cabins
- * - Status enum for maintenance tracking
- * - Capacity and amenities for AI recommendations
- * - Optimized for single company usage
- */
 public class Cabin {
 
     public enum Status {

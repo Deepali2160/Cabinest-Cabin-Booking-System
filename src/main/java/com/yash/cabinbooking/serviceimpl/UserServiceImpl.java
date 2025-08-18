@@ -5,7 +5,7 @@ import com.yash.cabinbooking.dao.UserDao;
 import com.yash.cabinbooking.daoimpl.UserDaoImpl;
 import com.yash.cabinbooking.model.User;
 import com.yash.cabinbooking.util.DbUtil;
-import com.yash.cabinbooking.util.PasswordUtil; // ✅ ADDED: Import PasswordUtil
+import com.yash.cabinbooking.util.PasswordUtil;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -13,16 +13,7 @@ import java.sql.ResultSet;
 import java.util.ArrayList;
 import java.util.List;
 
-/**
- * USER SERVICE IMPLEMENTATION - SINGLE COMPANY VERSION WITH SECURE PASSWORD HASHING
- *
- * Enhanced Features:
- * - BCrypt password hashing and verification
- * - Secure user authentication
- * - Single company focus for Yash Technology
- * - Enhanced business logic with security
- * - AdminController integration support
- */
+
 public class UserServiceImpl implements UserService {
 
     private UserDao userDAO;
